@@ -44,12 +44,14 @@ export interface Envelope {
  * open), with a woman widening who sees her details, and hidden marriages; 4
  * is the record of an exported chart (an older version would not show it); 5
  * is milk kinship (an older version would leave the records out of a snapshot
- * it writes, and out of a removal or a merge).
+ * it writes, and out of a removal or a merge); 6 is the root admin acting as a
+ * member (an older version would leave those requests and approvals out, and
+ * see a request waiting that is approved).
  * The server takes no entry from an older format after one from a newer
  * (server/handler.ts), so a page opened before an update cannot write once an
  * updated one has: it is told to update.
  */
-export const APP_FORMAT = 5;
+export const APP_FORMAT = 6;
 /** The server's refusal of an entry written by an older version of the app than the entry before it. */
 export const OLD_APP = 'old app';
 
@@ -114,7 +116,20 @@ export type Payload =
    * sealed for that reader alone): by whoever adds a woman, and by the root
    * admin's phone for whatever is missing.
    */
-  | { type: 'pkeys'; to: Record<string, { ids: string[]; b: Bundle }> };
+  | { type: 'pkeys'; to: Record<string, { ids: string[]; b: Bundle }> }
+  /**
+   * The root admin acting as a member (design document 1.38): signed with the
+   * root admin's key, `p` counts as written from one of `person`'s own phones,
+   * checked by every rule such a phone meets, and is shown as the root admin's
+   * «بصفة» that person. Only what a member does about the tree: their requests,
+   * approvals and refusals, how far a woman's details are seen, and an exported
+   * chart (AS_TYPES); never their devices, keys or anything only the root admin
+   * or the platinum holder may do.
+   */
+  | { type: 'as'; person: string; p: Payload };
+
+/** What the root admin may do as a member (an `as` entry). */
+export const AS_TYPES: ReadonlySet<string> = new Set(['propose', 'approve', 'reject', 'widen', 'export']);
 
 function signedBytes(e: Omit<Envelope, 'sig'>): Uint8Array {
   return utf8ToBytes(JSON.stringify([e.v, e.n, e.prev, e.at, e.pub, e.kid, e.nonce, e.ct]));

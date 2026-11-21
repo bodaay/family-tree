@@ -1,6 +1,6 @@
 // Where the family log lives: the shared server (encrypted, for a real family)
 // or this browser only (the sample family).
-import { OLD_APP, WRONG_WRITE_KEY, checkEntry, entryHash, makeEntry, type Envelope, type Payload } from '../core/log.ts';
+import { AS_TYPES, OLD_APP, WRONG_WRITE_KEY, checkEntry, entryHash, makeEntry, type Envelope, type Payload } from '../core/log.ts';
 import { b64, deviceFromSecret, newDeviceKey, writeKeyOf, type DeviceKey } from '../core/crypto.ts';
 import { addKeys, openLog, ringRecord, type Ring } from '../core/keyring.ts';
 import { sampleFamily, sampleKeys } from './sample';
@@ -50,6 +50,12 @@ export interface Membership {
   invite?: string;
   /** A recovery kit's backup key, kept only until it has added this phone to the person's devices. */
   kit?: string;
+  /**
+   * Joined with a link that moves a person's access out of a browser on an
+   * iPhone (design document 1.38): `from`, once known, is that browser's device,
+   * which this phone then removes from the person's devices.
+   */
+  move?: { from?: string };
   /** Women's keys this device has been handed (person id -> key): kept, as the family's key versions are. */
   pkeys?: Record<string, string>;
   /**
@@ -106,11 +112,12 @@ export function device(): DeviceKey {
  * ".i<invite key>" in a personal invite, or ".<admin key>" in the root admin's link.
  */
 export function parseInvite(text: string): Membership | null {
-  const m = text.match(/join=([a-z0-9]{6,40})\.([A-Za-z0-9_-]{40,})(?:\.(i?)([0-9a-f]{64}))?/);
+  const m = text.match(/join=([a-z0-9]{6,40})\.([A-Za-z0-9_-]{40,})(?:\.(i?)([0-9a-f]{64})(\.m)?)?/);
   if (!m) return null;
   const base = { fid: m[1], key: m[2] };
   if (!m[4]) return base;
-  return m[3] ? { ...base, invite: m[4] } : { ...base, admin: m[4] };
+  // ".m" after a device invite: it moves access out of a browser on an iPhone (older versions leave it out)
+  return m[3] ? { ...base, invite: m[4], ...(m[5] ? { move: {} } : {}) } : { ...base, admin: m[4] };
 }
 
 /** This device's signing key if it has one (none is made here): what a recovery kit is checked against. */
@@ -142,10 +149,14 @@ export function rememberMembership(m: Membership | null) {
   writeJSON(MEMBER, { ...m, ...(old.admin && !m.admin ? { admin: old.admin } : {}), keys: ringRecord(ring), ...(seen ? { seen } : {}), ...(Object.keys(pkeys).length ? { pkeys } : {}) });
 }
 
-/** A personal invite's link: the family's current key plus the invite's secret key. */
-export function personalLink(m: Membership, inviteSk: string): string {
-  return `${location.origin}/#join=${m.fid}.${m.key}.i${inviteSk}`;
+/** A personal invite's link: the family's current key plus the invite's secret key; `move`: it moves access out of this browser (design document 1.38). */
+export function personalLink(m: Membership, inviteSk: string, move = false): string {
+  return `${location.origin}/#join=${m.fid}.${m.key}.i${inviteSk}${move ? '.m' : ''}`;
 }
+
+/** What the log takes from a phone acting as a member (design document 1.38): nothing but what a member does, and the keys it hands over. */
+export const NOT_WHILE_ACTING = 'لا يُتاح هذا أثناء العمل بصفة غيرك';
+const WHILE_ACTING: ReadonlySet<string> = new Set(['pkeys', 'writekey']);
 
 /** Invites this device created, so the root admin can share one again. Never leaves this device. */
 export function savedInvites(fid: string): Record<string, string> {
@@ -355,6 +366,20 @@ export class RemoteLog implements Backend {
     this.store();
   }
 
+  /** Joined with a link that moves access out of a browser: the browser's device, to remove once this phone is in. */
+  moveFrom(device: string) {
+    this.m = { ...this.m, move: { from: device } };
+    this.store();
+  }
+
+  /** That browser is no longer one of the person's devices. */
+  moved() {
+    const { move, ...rest } = this.m;
+    if (!move) return;
+    this.m = rest;
+    this.store();
+  }
+
   /** This phone is one of the person's devices now: the kit's backup key leaves it (the keys it unlocked are kept). */
   kitDone() {
     const { kit, ...rest } = this.m;
@@ -393,6 +418,14 @@ export class RemoteLog implements Backend {
     return this.m.admin ? deviceFromSecret(this.m.admin).pk : null;
   }
 
+  /**
+   * The root admin acting as this member (design document 1.38): what a member
+   * does goes out as an `as` entry signed with the admin key; the keys this
+   * phone hands over go out as ever; anything else is refused here, whatever
+   * asked for it.
+   */
+  acting: string | null = null;
+
   /** This phone's own writes, one at a time: two at once would race each other for the same place in the log. */
   private queue: Promise<unknown> = Promise.resolve();
   append(p: Payload | Build, as?: 'admin' | DeviceKey, next?: Uint8Array): Promise<boolean> {
@@ -406,8 +439,12 @@ export class RemoteLog implements Backend {
     const signer = as === 'admin' ? deviceFromSecret(this.m.admin!) : as ?? device();
     for (let attempt = 0; attempt < 6; attempt++) {
       await this.pull();
-      const payload = typeof p === 'function' ? p(this.items) : p;
-      if (!payload) return false;
+      const built = typeof p === 'function' ? p(this.items) : p;
+      if (!built) return false;
+      const acting = this.acting;
+      if (acting && ((!AS_TYPES.has(built.type) && !WHILE_ACTING.has(built.type)) || !this.m.admin)) throw new Error(NOT_WHILE_ACTING);
+      const payload: Payload = acting && AS_TYPES.has(built.type) ? { type: 'as', person: acting, p: built } : built;
+      const by = payload.type === 'as' ? deviceFromSecret(this.m.admin!) : signer;
       // always the family's current key, which the pull above may just have renewed
       const kid = this.current(this.items);
       const key = kid ? this.ring.get(kid) : undefined;
@@ -419,7 +456,7 @@ export class RemoteLog implements Backend {
       }
       // the write key the server should ask for from here on: a renewal's new key's, or the current one's when the root admin registers it
       const nw = payload.type === 'rekey' && next ? writeKeyOf(next).pk : payload.type === 'writekey' ? writeKeyOf(key).pk : undefined;
-      const e = makeEntry(key, signer, this.envelopes.length, this.last, payload, nw);
+      const e = makeEntry(key, by, this.envelopes.length, this.last, payload, nw);
       const r = await fetch(`/api/f/${this.m.fid}/log/${e.n}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(e) });
       // read to the end, so the request is done with (and its connection free)
       const reply = (await r.json().catch(() => null)) as { error?: string } | null;

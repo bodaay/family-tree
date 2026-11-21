@@ -282,6 +282,22 @@ section h3, .hrow h3 { font-size: 18.5px; font-weight: 700; margin-bottom: 14px;
 /* a newer version is out: above the tab bar, under any sheet */
 .updatebar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--sb) + 98px); z-index: 35; display: flex; align-items: center; gap: 6px; white-space: nowrap; background: var(--card2); color: var(--fg); border: 1px solid var(--gline); padding: 10px 16px; border-radius: 999px; font-size: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
 .updatebar b { color: var(--acc); }
+/* the root admin acting as a member (design document 1.38): a bar on top of everything, the pages below it */
+.app.acting { --st: calc(env(safe-area-inset-top, 0px) + 46px); }
+.actbar { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 90; height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #b5523b; color: #fff; font-size: 14px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); }
+.actbar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actbar .btn.small { background: rgba(255, 255, 255, 0.18); color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+.app.acting::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: #b5523b; z-index: 90; }
+.hint.acted { display: flex; gap: 6px; align-items: flex-start; }
+/* iPhone and iPad in a browser: the family opens only in its app on the Home Screen */
+.join.homescreen { justify-content: flex-start; overflow-y: auto; text-align: start; }
+.join.homescreen h2, .join.homescreen .wl-mark { align-self: center; text-align: center; }
+.join.homescreen .steps { margin: 0; padding-inline-start: 22px; font-size: 14.5px; line-height: 1.9; }
+.join.homescreen .small { font-size: 13px; }
+.join.homescreen section.move { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.join.homescreen section.move h3 { margin-bottom: 0; }
+.card.carry { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.card.carry .mono { color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--sb) + 100px); z-index: 80; background: #1c1f36; color: #fff; padding: 12px 18px; border-radius: 16px; font-size: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); max-width: calc(100% - 40px); text-align: center; }
 
 /* ---------- wide screens: tablets, unfolded foldables, desktops ---------- */

@@ -37,6 +37,11 @@ function marks(s: State, t: string, tx: Tx, others: boolean): string {
   });
 }
 
+/** Who sent, approved or refused it: a member, or the root admin acting as them (design document 1.38). */
+export function byWho(s: State, by: string, via?: boolean): string {
+  return via ? 'مشرف العائلة بصفة ' + nameOf(s, by) : nameOf(s, by);
+}
+
 /** A change's title as this viewer may read it. */
 export function titleOf(s: State, tx: Tx): string {
   // who asked, and the key holders handling the request, see whom it is about

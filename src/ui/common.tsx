@@ -183,3 +183,18 @@ export function genLabel(g: number): string {
 
 /** Folds Arabic spellings for comparing names (see data/names.ts). */
 export { normName as norm } from '../data/names';
+
+/** What the root admin did as this member (design document 1.38): it is in the family's record for all to see, and said here too. */
+export function ActedFor({ s, id }: { s: State; id: string }) {
+  const a = s.acted.get(id);
+  if (!a) return null;
+  const f = s.graph.nodes.get(id)?.sex === 'f';
+  const you = s.me === id && !s.actingAs;
+  const day = new Date(a.at).toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium' });
+  const times = a.n === 1 ? 'مرة واحدة' : a.n === 2 ? 'مرتين' : `${a.n} مرات`;
+  return (
+    <p class="hint acted">
+      <Icon name="eye" size={14} /> {you ? `عمل مشرف العائلة بصفت${f ? 'كِ' : 'ك'}` : `عمل مشرف العائلة بصفة ${nameOf(s, id)}`} {times}، آخرها {day}. يظهر كل ذلك في سجل الطلبات باسم «مشرف العائلة بصفة {nameOf(s, id)}».
+    </p>
+  );
+}

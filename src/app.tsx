@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useStore, set, viewer, decides, type Tab } from './data/store';
+import { useStore, set, viewer, decides, nameOf, endActing, type Tab } from './data/store';
 import { canApprove } from './data/governance';
 import { Icon } from './ui/icons';
 import { themeOf } from './ui/common';
@@ -25,6 +25,8 @@ import { MilkSheet } from './ui/Milk';
 import { KidsSheet, MarriageSheet, SpouseSheet } from './ui/Marriage';
 import { applyFont } from './font';
 import { reloadApp, useNewerVersion } from './update';
+import { inBrowserOnIPhone } from './platform';
+import { HomeScreenOnly } from './ui/HomeScreen';
 import { useBack } from './ui/back';
 
 const TABS: [Tab, string, string][] = [
@@ -58,6 +60,15 @@ export function App() {
   const newer = useNewerVersion();
   // back from another tab returns to the tree
   useBack(() => set({ tab: 'tree' }), s.status === 'ready' && s.tab !== 'tree');
+  // an iPhone or iPad in a browser: the family opens only in its app on the Home Screen (a guest already in may stay)
+  if (inBrowserOnIPhone() && s.status !== 'locked' && s.status !== 'loading' && !s.restore && (s.carry || (s.status === 'none' && !s.ended) || (s.status === 'ready' && s.mode === 'remote' && !s.guest))) {
+    return (
+      <div class={'app ' + theme}>
+        <HomeScreenOnly s={s} />
+        {s.toast && <div class="toast">{s.toast}</div>}
+      </div>
+    );
+  }
   // a real family opens only on a phone linked to a person (or the root admin's)
   const needsInvite = s.status === 'ready' && s.mode === 'remote' && !s.me && !s.rootAdmin && !s.guest;
   if (s.status !== 'ready' || needsInvite || s.restore) {
@@ -75,7 +86,18 @@ export function App() {
   const go = (id: Tab) => set(id === s.tab && !s.profile && id === 'tree' ? { focus: null } : { tab: id, profile: null });
 
   return (
-    <div class={'app ' + theme}>
+    <div class={'app ' + theme + (s.actingAs ? ' acting' : '')}>
+      {s.actingAs && (
+        <div class="actbar" role="status">
+          <Icon name="eye" size={16} />
+          <span>
+            تعمل بصفة <b>{nameOf(s, s.actingAs)}</b> · كل ما تفعله يُسجَّل
+          </span>
+          <button class="btn small" onClick={endActing}>
+            إنهاء
+          </button>
+        </div>
+      )}
       {s.tab === 'tree' && <Home s={s} />}
       {s.tab === 'relation' && <Relation s={s} />}
       {s.tab === 'requests' && <Requests s={s} />}

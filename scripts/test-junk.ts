@@ -102,6 +102,10 @@ const valid: Payload[] = [
   { type: 'rekey', kid: keyId(k2), ...wrapKey(k2, [admin.pk, b.pk]), by: null },
   { type: 'keys', keys: { [keyId(k1)]: b64(k1) } },
   { type: 'writekey', kid: keyId(k1) },
+  // the root admin acting as a member (design document 1.38)
+  { type: 'as', person: 'p2', p: { type: 'propose', tx: tx([]) } },
+  { type: 'as', person: 'p2', p: { type: 'approve', txId: 'tx-1', by: 'p2' } },
+  { type: 'as', person: 'p2', p: { type: 'reject', txId: 'tx-1', by: 'p2' } },
 ];
 
 // what anyone holding the key could write instead
@@ -154,6 +158,16 @@ const junk: unknown[] = [
   { type: 'writekey' },
   { type: 'seed', family: { family: { name: 'x' }, root: null, people: [] } },
   { type: 'seed', family: { ...family, people: 'many' } },
+  // acting as a member: only what a member does about the tree, one level, in its own shape
+  { type: 'as', person: 'p2' },
+  { type: 'as', person: 5, p: { type: 'approve', txId: 'tx-1', by: 'p2' } },
+  { type: 'as', person: 'p2', p: { type: 'approve', txId: { id: 1 }, by: 'p2' } },
+  { type: 'as', person: 'p2', p: { type: 'device', act: { kind: 'remove', keys: [b.pk] }, by: 'p2' } },
+  { type: 'as', person: 'p2', p: { type: 'admin', act: { kind: 'vacate', holder: 'p3' }, by: null } },
+  { type: 'as', person: 'p2', p: { type: 'access', act: { kind: 'viewall', person: 'p3', on: true }, by: 'p2' } },
+  { type: 'as', person: 'p2', p: { type: 'rekey', kid: keyId(k2), ...wrapKey(k2, [admin.pk]), by: 'p2' } },
+  { type: 'as', person: 'p2', p: { type: 'as', person: 'p3', p: { type: 'approve', txId: 'tx-1', by: 'p3' } } },
+  { type: 'as', person: 'p2', p: { type: 'photo', id: 'x' } },
 ];
 
 test('every shape the app writes is taken (including the tracked family chart as a seed)', () => {

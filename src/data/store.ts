@@ -12,9 +12,10 @@ import { fromRaw } from './load';
 import { THIS_YEAR } from './dates';
 import { applySeatAct, assess, asksAbout, canApprove, isComplete, isMinor, branchOf, mainBranchProblem, mayAsk, validSeats } from './governance';
 import { degreeWord, kin } from './kinship';
-import type { Payload } from '../core/log.ts';
+import { AS_TYPES, type Payload } from '../core/log.ts';
 import type { FontKey } from '../font';
-import { RemoteLog, SampleLog, device, membership, parseInvite, personalLink, rememberMembership, saveInvite, savedInvites, storedDevice, type Backend, type Item, type Membership } from './backend';
+import { NOT_WHILE_ACTING, RemoteLog, SampleLog, device, membership, parseInvite, personalLink, rememberMembership, saveInvite, savedInvites, storedDevice, type Backend, type Item, type Membership } from './backend';
+import { inBrowserOnIPhone } from '../platform';
 import { b64, canReceiveKey, deviceFromSecret, keyId, newDeviceKey, newFamilyKey, sign, unb64, wrapKey, type DeviceKey } from '../core/crypto.ts';
 import { KeyChain, adminCopyOpens } from './keychain';
 import { confirmPresence, forget, isLocked, lockOn } from './vault';
@@ -91,6 +92,18 @@ export interface State extends Prefs {
   exports: ExportRec[];
   /** The export sheet: whom the chart is of, and which way. */
   exportFor: { from: string; kind: 'down' | 'up' } | null;
+  /**
+   * Root admin: the member this phone is acting as (design document 1.38): it
+   * shows and does what their phone would, recorded as the root admin's «بصفة».
+   * Never kept: reopening the app, or the Face ID lock, ends it.
+   */
+  actingAs: string | null;
+  /** How often the root admin acted as each member, and when last. */
+  acted: Map<string, { n: number; at: number }>;
+  /** iPhone or iPad in a browser: a link opened here, not taken up but shown to copy into the app on the Home Screen. */
+  carry: string | null;
+  /** `ended` because this browser moved its access into the app on the Home Screen. */
+  movedApp: boolean;
   sealedEra: boolean;
   /** Women whose details this phone opened with her key. */
   opened: Set<string>;
@@ -192,12 +205,22 @@ function loadPrefs(key: string): Prefs {
 // «انتهى دخولك» stays until the person taps «حسنًا», also when the page reloads
 // meanwhile (a phone that kills and restores the app in the background)
 const ENDED = 'ft-ended';
-function keepEnded(name: string | null) {
+const MOVED = 'ft-moved';
+function keepEnded(name: string | null, moved = false) {
   try {
     if (name) localStorage.setItem(ENDED, name);
     else localStorage.removeItem(ENDED);
+    if (name && moved) localStorage.setItem(MOVED, '1');
+    else localStorage.removeItem(MOVED);
   } catch {
     /* private mode: shown for this session */
+  }
+}
+function movedBefore(): boolean {
+  try {
+    return localStorage.getItem(MOVED) === '1';
+  } catch {
+    return false;
   }
 }
 function endedBefore(): string | null {
@@ -237,6 +260,10 @@ let state: State = {
   adminPerson: null,
   exports: [],
   exportFor: null,
+  actingAs: null,
+  acted: new Map(),
+  carry: null,
+  movedApp: endedBefore() !== null && movedBefore(),
   opened: new Set(),
   before: [],
   cancelled: [],
@@ -289,7 +316,8 @@ export function getState(): State {
 
 function savePrefs() {
   try {
-    const p: Prefs = { me: state.me, persona: state.persona, settings: state.settings };
+    // acting as a member (design document 1.38), this phone is still the root admin's own
+    const p: Prefs = { me: state.actingAs ? ownMe : state.me, persona: state.persona, settings: state.settings };
     localStorage.setItem(prefsKey, JSON.stringify(p));
   } catch {
     /* private mode: works for this session */
@@ -299,7 +327,7 @@ function savePrefs() {
 export function set(patch: Partial<State>) {
   state = { ...state, ...patch };
   if ('me' in patch || 'persona' in patch || 'settings' in patch) savePrefs();
-  if ('ended' in patch) keepEnded(patch.ended ?? null);
+  if ('ended' in patch) keepEnded(patch.ended ?? null, !!patch.movedApp);
   listeners.forEach(l => l());
 }
 
@@ -402,6 +430,8 @@ interface Replayed {
   adminPerson: string | null;
   /** The charts exported, in the log's order (src/export). */
   exports: ExportRec[];
+  /** How often the root admin acted as each member, and when last (design document 1.38). */
+  acted: Map<string, { n: number; at: number }>;
 }
 
 /**
@@ -452,13 +482,19 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
     const n = graph!.nodes.get(id);
     return !!n && !n.familyRoot && !n.external;
   };
-  const signedBy = (pub: string, person: string) => !strict || devices.get(pub) === person;
+  // the root admin acting as a member (an 'as' entry, design document 1.38): what it
+  // carries counts as from one of that person's phones, and from nowhere else
+  let actor: string | null = null;
+  const acted = new Map<string, { n: number; at: number }>();
+  const signedBy = (pub: string, person: string) => !strict || (actor !== null ? actor === person : devices.get(pub) === person);
   // under 18 when it was written (and now, for an entry dated ahead): no requests, approvals or refusals
   const minorAt = (person: string, at: number) => isMinor(graph!, person, Math.min(new Date(at).getUTCFullYear(), THIS_YEAR));
-  // the root admin, or the phone of whoever holds the platinum key now
+  // the root admin, or the phone of whoever holds the platinum key now (or the
+  // root admin acting as them: only what a member does reaches here that way, an
+  // exported chart or how far a woman's details are seen, never the family's settings)
   const manager = (pub: string, by: string | null) => {
     const platinum = seats.find(x => x.tier === 'platinum')?.holder;
-    return pub === adminPub || (!!by && by === platinum && devices.get(pub) === by);
+    return pub === adminPub || (!!by && by === platinum && (actor !== null ? actor === by : devices.get(pub) === by));
   };
   // who keeps access (by public key): the root admin, linked phones and guests'
   // phones, and invites not yet used or cancelled, of people still in the tree
@@ -507,7 +543,10 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
   // the private things this phone opened (hidden marriages), each checked as the tree and the seats stood when written
   const met: Met[] = [];
   const asked = new Map<string, string>();
-  for (const { p, at, pub, kid, priv } of items) {
+  for (const item of items) {
+    const { at, kid, priv } = item;
+    let { p, pub } = item;
+    actor = null;
     // sealed with an older or unknown key (e.g. by someone a renewal left out), or unreadable
     if (!chain.counts(kid) || !p) continue;
     if (awaiting && p.type !== 'epoch') continue;
@@ -558,6 +597,18 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
       continue;
     }
     if (!base || !graph) continue;
+    if (p.type === 'as') {
+      // only the root admin's key, only as a member with a phone in the family
+      // (never the admin's own place), and only what a member does about the tree
+      const who = p.person;
+      if (pub !== adminPub || !strict || !isPerson(who) || who === adminPerson(book.info.values()) || ![...devices.values()].includes(who) || !AS_TYPES.has(p.p.type)) continue;
+      actor = who;
+      // no phone's key: whatever only a manager may do is never done this way (manager() below)
+      pub = 'as:' + who;
+      p = p.p;
+      const was = acted.get(who);
+      acted.set(who, { n: (was?.n ?? 0) + 1, at });
+    }
     if (p.type === 'private') {
       const g0 = graph as Graph;
       const admin = adminPerson(book.info.values());
@@ -650,7 +701,7 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
     }
     if (p.type === 'export') {
       // recorded whatever it shows, so a poster's code always finds who made it; `ok` whether they could
-      exports.push({ code: p.code, by: p.by, at, admin: pub === adminPub, what: p.what, ok: exporter(pub, p.by, p.what.from, at) });
+      exports.push({ code: p.code, by: p.by, at, admin: pub === adminPub, ...(actor ? { via: true } : {}), what: p.what, ok: exporter(pub, p.by, p.what.from, at) });
       continue;
     }
     if (p.type === 'widen') {
@@ -734,17 +785,20 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
       // beyond the family's limit on requests, as it stood when sent: never a request
       if (!mayAsk(graph!, seats, asks, p.tx.by, p.tx.ops)) continue;
       // what the replay works out (how it ended) is never taken from the entry
-      const { closed: _c, direct: _d, rejectedBy: _r, byAdmin: _a, declared: _x, ...asked } = p.tx;
+      const { closed: _c, direct: _d, rejectedBy: _r, rejectedVia: _rv, byAdmin: _a, declared: _x, via: _v, ...asked } = p.tx;
       // its level and branch are worked out here from its changes, never as its sender wrote them
       const owners = new Set(book.ever.values());
       const { level, branch } = assess(graph!, asked.ops, id => owners.has(id), seats);
       const tx: Tx = { ...asked, level, branch, status: 'pending', approvals: [] };
       if (level !== asked.level || branch !== asked.branch) tx.declared = { level: asked.level, branch: asked.branch };
+      if (actor) tx.via = true;
       txs.push(tx);
       byId.set(tx.id, tx);
       closeIfGone(tx);
       continue;
     }
+    // what is left is an approval or a refusal (a newer version's kinds of entry are passed over)
+    if (p.type !== 'approve' && p.type !== 'reject') continue;
     const tx = byId.get(p.txId);
     if (!tx || tx.status !== 'pending' || !signedBy(pub, p.by) || minorAt(p.by, at)) continue;
     const c = canApprove(graph, seats, p.by, tx);
@@ -752,9 +806,10 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
     if (p.type === 'reject') {
       tx.status = 'rejected';
       tx.rejectedBy = p.by;
+      if (actor) tx.rejectedVia = true;
       continue;
     }
-    tx.approvals.push({ by: p.by, at, override: c.override });
+    tx.approvals.push({ by: p.by, at, override: c.override, ...(actor ? { via: true } : {}) });
     if (isComplete(graph, seats, tx)) {
       tx.status = 'approved';
       refresh();
@@ -770,6 +825,7 @@ function replay(items: Item[], strict: boolean, keys?: Held): Replayed | null {
     hidden: hiddenOf(met, graph, new Set([...base.marriages.map(m => m.id), ...txs.flatMap(t => (t.status === 'approved' ? t.ops.flatMap(o => (o.op === 'addMarriage' ? [o.marriage.id] : [])) : []))])),
     adminPerson: adminPerson(book.info.values()),
     exports,
+    acted,
   };
 }
 
@@ -797,6 +853,21 @@ function remoteLog(m: Membership): RemoteLog {
 /** The log as the state shown was last rebuilt from. */
 let built: Item[] | null = null;
 
+/** This phone's own person, while acting as another (what its preferences keep). */
+let ownMe: string | null = null;
+
+/** Acting as a member ended by itself (they were removed, or their phones were): said once the state is shown. */
+let endedActing = false;
+
+/**
+ * Whom the root admin may act as (design document 1.38): a member of the family
+ * with a phone in it, never the root admin's own place. The replay checks the same.
+ */
+function actable(r: Replayed, who: string): boolean {
+  const n = r.graph.nodes.get(who);
+  return !!n && !n.familyRoot && !n.external && who !== r.adminPerson && [...r.devices.values()].includes(who);
+}
+
 /** `opened`: the first rebuild after the family opened on this phone. */
 function rebuild(opened = false) {
   if (!backend) return;
@@ -806,8 +877,19 @@ function rebuild(opened = false) {
   const { base, txs, graph, seats, adminPub, adminBy, invites, devices, deviceInfo, guests, guestDevices, viewAll, reach, reachSet, asks, asksSet } = r;
   const rootAdmin = backend.adminPub() === adminPub;
   const familyKey = { version: r.keyVersion || 1, at: r.keyAt, stale: r.stale.length, mine: false };
-  const patch: Partial<State> = { base, txs, graph, seats, adminBy, invites, devices, deviceInfo, linked: new Set(r.owners.values()), guests, viewAll, reach, own: r.own, reachSet, asks, asksSet, rootAdmin, guest: null, seesAll: false, familyKey };
+  const patch: Partial<State> = { base, txs, graph, seats, adminBy, invites, devices, deviceInfo, linked: new Set(r.owners.values()), guests, viewAll, reach, own: r.own, reachSet, asks, asksSet, rootAdmin, guest: null, seesAll: false, familyKey, acted: r.acted };
   let kitFor: string | null = null;
+  // the root admin acting as a member (design document 1.38): this phone shows and
+  // does what that member's phone would; it ends if they can no longer be acted as
+  let acting: string | null = null;
+  if (state.actingAs) {
+    if (rootAdmin && backend instanceof RemoteLog && actable(r, state.actingAs)) acting = state.actingAs;
+    else {
+      patch.actingAs = null;
+      endedActing = true;
+    }
+  }
+  if (backend instanceof RemoteLog) backend.acting = acting;
   if (backend instanceof RemoteLog) {
     // a renewal this phone cannot read past, though it was not removed: a copy
     // sealed for it that does not open (the root admin is always handed one).
@@ -824,12 +906,19 @@ function rebuild(opened = false) {
     // someone the root admin has since removed from the tree)
     const linked = devices.get(device().pk);
     const mine = linked && graph.nodes.has(linked) ? linked : null;
+    ownMe = mine;
     const guestKey = guestDevices.get(device().pk);
     patch.me = mine;
     patch.persona = null;
     patch.guest = guestKey ? { label: guests.find(x => x.key === guestKey)!.label } : null;
     // the root admin manages and invites everyone, so sees every name
     patch.seesAll = rootAdmin || !!guestKey || (!!mine && viewAll.has(mine));
+    if (acting) {
+      // as that member's phone: their place, what they see, and no root admin's powers
+      patch.me = acting;
+      patch.rootAdmin = false;
+      patch.seesAll = viewAll.has(acting);
+    }
     const m = currentMembership();
     patch.claim = null;
     if (m?.invite) {
@@ -838,7 +927,11 @@ function rebuild(opened = false) {
       const gu = guests.find(x => x.key === pub);
       const mineNow = (inv && inv.device === device().pk) || (gu && gu.device === device().pk);
       const status = (st?: string) => (st === 'pending' ? 'ok' : st === 'joined' ? 'used' : st === 'revoked' ? 'revoked' : 'unknown') as 'ok' | 'used' | 'revoked' | 'unknown';
-      if (mineNow) backend.joined();
+      if (mineNow) {
+        // a link that moves access out of a browser on an iPhone: that browser leaves once this phone is in
+        if (m.move && !m.move.from && inv?.from) backend.moveFrom(inv.from);
+        backend.joined();
+      }
       else if (gu) patch.claim = { kind: 'guest', person: '', label: gu.label, status: status(gu.status) };
       else {
         // an invite for someone who has a device already adds this one to theirs
@@ -860,7 +953,8 @@ function rebuild(opened = false) {
       return;
     }
     // a device or an invite of this person was removed, and the key it holds is not renewed yet
-    familyKey.mine = !!mine && r.stale.some(k => r.owners.get(k) === mine);
+    const who = acting ?? mine;
+    familyKey.mine = !!who && r.stale.some(k => r.owners.get(k) === who);
   }
   // after the move to per-person keys: each woman's details as far as this phone holds her key
   patch.sealedEra = !!r.epoch;
@@ -869,16 +963,25 @@ function rebuild(opened = false) {
   patch.movedDiffers = r.epochCheck === false;
   patch.before = r.before;
   patch.opened = new Set();
-  patch.hidden = r.hidden;
+  // what the root admin's phone opened as itself (hidden marriages) is never shown as another member's
+  patch.hidden = acting ? [] : r.hidden;
   patch.adminPerson = r.adminPerson;
   patch.exports = r.exports;
   if (r.epoch && backend instanceof RemoteLog) Object.assign(patch, decorate(r.graph, backend.pkeys, r.hidden));
   set(patch);
+  if (endedActing) {
+    endedActing = false;
+    toast('انتهى العمل بصفة غيرك');
+  }
+  // the root admin's own upkeep waits while acting as a member (it is never written as theirs)
+  const admin = rootAdmin && !acting;
   if (kitFor) registerKit(kitFor);
-  if (r.epoch && rootAdmin) void handOutMissing();
-  if (r.epoch && rootAdmin) void sealMarriageYears();
-  if (r.epoch && r.hidden.length) void keepHidden(r);
-  if (r.awaiting && rootAdmin) void finishMove();
+  if (r.epoch && admin) void handOutMissing();
+  if (r.epoch && admin) void sealMarriageYears();
+  if (r.epoch && r.hidden.length && !acting) void keepHidden(r);
+  if (r.awaiting && admin) void finishMove();
+  // moved here from a browser on an iPhone: the browser leaves the person's devices
+  if (backend instanceof RemoteLog && backend.m.move && !acting) void finishMoveIn();
   // a renewal cut short before carrying the earlier keys forward: finish it
   if (r.backfill && canGrantAccess() && !moving) void carryKeys();
   renewIfDue(r, opened);
@@ -924,11 +1027,13 @@ function unreachable(e: unknown): boolean {
 /** Removes the family from this device: its key, settings, the log it kept, and everything shown. */
 function wipeFamily(name: string) {
   const fid = state.fid;
-  for (const k of ['ft-family', 'ft-mode', 'ft-prefs:' + fid, 'ft-invites:' + fid]) forget(k);
+  // this browser moved its access into the app on the Home Screen (moveToApp), which then removed it
+  const moved = !!fid && !!movingKey(fid);
+  for (const k of ['ft-family', 'ft-mode', 'ft-prefs:' + fid, 'ft-invites:' + fid, MOVING + fid]) forget(k);
   if (fid) void dropLog(fid);
   backend = null;
   set({
-    status: 'none', mode: null, fid: null, ended: name, base: EMPTY, graph: buildGraph(EMPTY), txs: [], seats: [], invites: [], guests: [],
+    status: 'none', mode: null, fid: null, ended: name, movedApp: moved, actingAs: null, acted: new Map(), base: EMPTY, graph: buildGraph(EMPTY), txs: [], seats: [], invites: [], guests: [],
     devices: new Map(), deviceInfo: new Map(), linked: new Set(), viewAll: new Set(), reach: 3, own: new Map(), reachSet: null, asks: null, asksSet: null, me: null, persona: null, guest: null, seesAll: false, claim: null, rootAdmin: false,
     sealedEra: false, opened: new Set(), before: [], cancelled: [], movedAt: null, movedDiffers: false, hidden: [], adminPerson: null, exports: [], exportFor: null,
     focus: null, profile: null, addFor: null, searchOpen: false, inviteOpen: null, kitOpen: false, tab: 'tree',
@@ -941,7 +1046,7 @@ async function open(b: Backend, fid: string | null) {
   prefsKey = 'ft-prefs:' + (fid ?? 'sample');
   const prefs = loadPrefs(prefsKey);
   // a family opening says no more that an earlier one ended (unless this one ends too, as it opens)
-  set({ ...prefs, status: 'loading', error: null, ended: null, kept: false, mode: b.kind, fid, isSample: b.kind === 'sample', relA: prefs.persona ?? prefs.me });
+  set({ ...prefs, status: 'loading', error: null, ended: null, kept: false, mode: b.kind, fid, isSample: b.kind === 'sample', relA: prefs.persona ?? prefs.me, actingAs: null });
   try {
     // what this phone kept from its last read: with no connection, the family opens from it
     if (fid && b instanceof RemoteLog) void keepOnly(fid);
@@ -998,6 +1103,12 @@ export async function sync() {
 }
 
 export function joinFamily(link: string): boolean {
+  // iPhone and iPad: never in a browser, only in the app on the Home Screen
+  if (inBrowserOnIPhone()) {
+    if (!restoreBlob(link) && !parseInvite(link)) return false;
+    set({ carry: link.trim() });
+    return true;
+  }
   const kit = restoreBlob(link);
   if (kit) {
     set({ restore: kit, ended: null });
@@ -1051,6 +1162,11 @@ export function logSize(): number {
 // link in the address asks for its passphrase first.
 let startLink = location.hash;
 if (/(?:join|restore)=/.test(startLink)) history.replaceState(null, '', location.pathname); // keys must not linger in the address bar
+// on an iPhone or iPad, a link opened in a browser is not taken up there, only shown to copy into the app on the Home Screen
+if (inBrowserOnIPhone() && /(?:join|restore)=/.test(startLink)) {
+  set({ carry: location.origin + '/' + startLink });
+  startLink = '';
+}
 {
   const kit = restoreBlob(startLink);
   if (kit) set({ restore: kit });
@@ -1114,8 +1230,9 @@ export function reachFor(s: State, id: string): number | null {
 export function mayWiden(s: State, woman: string): boolean {
   const n = s.graph.nodes.get(woman);
   if (!isWoman(n) || s.isSample || s.guest || isMinorViewer(s)) return false;
-  if (canGrantAccess(s)) return true;
   const v = viewer(s);
+  // the platinum holder's phone, or the root admin acting as them (design document 1.38)
+  if (canGrantAccess(s) || (!!v && s.seats.some(x => x.tier === 'platinum' && x.holder === v))) return true;
   if (!v) return false;
   if (v === woman) return true;
   if ([...s.devices.values()].includes(woman)) return false;
@@ -1777,6 +1894,8 @@ async function writePrivate(list: Wrapped[], readers: string[]) {
 
 /** Who this phone may ask to approve hiding its owner's marriage. */
 export function hideApprovers(s: State = state): string[] {
+  // a hidden marriage is never asked for as another member (design document 1.38)
+  if (s.actingAs) return [];
   const me = viewer(s);
   return me && s.sealedEra && !s.isSample ? approversFor(s.graph, s.seats, s.adminPerson, me) : [];
 }
@@ -2096,10 +2215,10 @@ async function adminWrite(act: AdminAct, done: string): Promise<boolean> {
  * borrows cannot hand out lasting access. Callers ask before awaiting anything
  * else, so the browser still counts the tap.
  */
-async function present(): Promise<boolean> {
+async function present(not = 'فلم يُعرض الرابط'): Promise<boolean> {
   if (!lockOn()) return true;
   const r = await confirmPresence();
-  if (r !== 'ok') toast(r === 'wrong' ? 'لم تطابق البصمة قفل هذا الهاتف، فلم يُعرض الرابط' : 'لم يكتمل التحقق بالبصمة، فلم يُعرض الرابط');
+  if (r !== 'ok') toast((r === 'wrong' ? 'لم تطابق البصمة قفل هذا الهاتف، ' : 'لم يكتمل التحقق بالبصمة، ') + not);
   return r === 'ok';
 }
 
@@ -2169,6 +2288,11 @@ async function deviceWrite(act: DeviceAct | ((r: Replayed) => DeviceAct | null),
   const b = backend;
   const by = state.me;
   if (!(b instanceof RemoteLog) || !by) return false;
+  // a member's devices are never reached by acting as them (design document 1.38)
+  if (state.actingAs) {
+    toast(NOT_WHILE_ACTING);
+    return false;
+  }
   try {
     const wrote = await b.append(items => {
       if (typeof act !== 'function') return { type: 'device', act, by };
@@ -2205,6 +2329,7 @@ const TOO_MANY = 'لا يتسع لجهاز آخر: أزل جهازًا لا تس
 export async function addDevice() {
   const m = currentMembership();
   const me = state.me;
+  if (state.actingAs) return toast(NOT_WHILE_ACTING);
   if (!m || !me || !(await present())) return;
   const saved = savedInvites(m.fid);
   const waiting = state.invites.find(i => i.status === 'pending' && i.person === me && saved[i.key]);
@@ -2324,10 +2449,137 @@ export async function checkKit(kit: Kit): Promise<'ok' | 'here' | 'here-old' | '
   return works ? 'ok' : 'ended';
 }
 
+// ---- the root admin acting as a member (design document 1.38)
+
+/** Every sheet and overlay closed: acting as someone, or ending it, starts from the tree. */
+const CLOSED: Partial<State> = {
+  focus: null, profile: null, addFor: null, searchOpen: false, inviteOpen: null, kitOpen: false, keySheet: null, pickSeat: null, branchEditor: false, exportFor: null,
+  editFor: null, deathFor: null, moveFor: null, lineFrom: null, spouseFor: null, spousePick: null, grantFor: null, marriageFor: null, kidsFor: null, milkFor: null, milkPick: null, mergeFor: null, mergeWith: null,
+};
+
+/** Whether this phone may act as this person now: the root admin's, for a member with a phone in the family (never the admin's own place). */
+export function mayActAs(s: State, who: string): boolean {
+  if (!s.rootAdmin || s.isSample || s.actingAs || s.mode !== 'remote') return false;
+  const n = s.graph.nodes.get(who);
+  return !!n && !n.familyRoot && !n.external && who !== s.adminPerson && [...s.devices.values()].includes(who);
+}
+
+/**
+ * The root admin acts as a member: the app shows what their phone shows, and
+ * what they send, approve or refuse is theirs, by the same rules as from their
+ * phone, each entry recorded in the log as the root admin's «بصفة» them, for the
+ * whole family to see. Their devices, recovery kit, Face ID lock and keys are
+ * never reached, nor anything only the root admin or the platinum holder may do.
+ * With the Face ID lock on, Face ID is asked first.
+ */
+export async function actAs(who: string) {
+  if (!mayActAs(state, who)) return;
+  if (!(await present('فلم يبدأ العمل بصفته'))) return;
+  set({ actingAs: who, ...CLOSED, tab: 'tree', relA: who });
+  rebuild();
+  if (state.actingAs === who) toast('تعمل الآن بصفة ' + nameOf(state, who));
+}
+
+/** Back to the root admin's own phone. */
+export function endActing() {
+  const who = state.actingAs;
+  if (!who) return;
+  set({ actingAs: null, ...CLOSED, tab: 'tree' });
+  rebuild();
+  set({ relA: state.me });
+  toast('انتهى العمل بصفة ' + nameOf(state, who));
+}
+
+// ---- iPhone and iPad: the family opens only in the app on the Home Screen (design document 1.38)
+
+/** A browser on an iPhone moving its access into the app: the device invite it made for it (a public key, not secret). */
+const MOVING = 'ft-moving:';
+function movingKey(fid: string): string | null {
+  try {
+    return localStorage.getItem(MOVING + fid);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A browser on an iPhone holding a member's access from before: a one-time
+ * link for another device of theirs, to paste in the app on the Home Screen.
+ * Once the app is in with it, the app removes this browser from the person's
+ * devices (finishMoveIn), and this browser forgets the family when it next
+ * opens. One made before and still waiting is given again.
+ */
+export async function moveToApp(): Promise<string | null> {
+  const m = currentMembership();
+  const me = state.me;
+  if (!m || !me || state.actingAs || !(await present())) return null;
+  const was = movingKey(m.fid);
+  const saved = savedInvites(m.fid);
+  if (was && saved[was] && state.invites.some(i => i.key === was && i.status === 'pending')) return personalLink(m, saved[was], true);
+  const mineWaiting = state.invites.filter(i => i.status === 'pending' && i.person === me && i.from).length;
+  if (!hasRoom(state, me) || mineWaiting >= MAX_WAITING) {
+    toast(TOO_MANY);
+    return null;
+  }
+  const k = newDeviceKey();
+  saveInvite(m.fid, k.pk, k.sk);
+  if (!(await deviceWrite({ kind: 'invite', key: k.pk }, null))) return null;
+  if (!state.invites.some(i => i.key === k.pk)) {
+    toast(TOO_MANY);
+    return null;
+  }
+  try {
+    localStorage.setItem(MOVING + m.fid, k.pk);
+  } catch {
+    /* the move still works: this browser only says less once it is removed */
+  }
+  return personalLink(m, k.sk, true);
+}
+
+/** The app on the Home Screen, in with a link that moves access out of a browser: that browser leaves the person's devices. */
+let movingIn = false;
+async function finishMoveIn() {
+  const b = backend;
+  if (movingIn || !(b instanceof RemoteLog) || !b.m.move) return;
+  const me = state.me;
+  if (!me) return;
+  const from = b.m.move.from;
+  if (!from || from === device().pk || state.devices.get(from) !== me) return b.moved();
+  movingIn = true;
+  try {
+    if (await removeMyDevices([from], 'نُقل دخولك إلى هذا التطبيق، وأُزيل المتصفح من أجهزتك')) b.moved();
+  } finally {
+    movingIn = false;
+  }
+}
+
+/** The root admin's link, to paste in the app on the Home Screen (Face ID first, with the lock on). */
+export async function adminLinkHere(): Promise<string | null> {
+  const m = currentMembership();
+  if (!m?.admin || !state.rootAdmin || !(await present())) return null;
+  return `${location.origin}/#join=${m.fid}.${m.key}.${m.admin}`;
+}
+
+/**
+ * The root admin's access leaves this browser: its own phone link, if it has one
+ * (a renewal follows, as for any removed device), then everything the family
+ * left here. The app on the Home Screen opens with the root admin's link.
+ */
+export async function eraseAdminHere(): Promise<boolean> {
+  if (!(backend instanceof RemoteLog) || !state.rootAdmin) return false;
+  const pk = device().pk;
+  if (state.devices.has(pk)) await revokeKeys([pk], 'أُزيل هذا المتصفح من أجهزة مشرف العائلة');
+  wipeFamily('');
+  set({ ended: null, movedApp: false });
+  toast('حُذف دخول المشرف من هذا المتصفح');
+  return true;
+}
+
 // ---- view all: the root admin or the platinum key holder
 
 export function canGrantAccess(s: State = state): boolean {
-  return s.mode === 'remote' && (s.rootAdmin || (!!s.me && s.seats.some(x => x.tier === 'platinum' && x.holder === s.me)));
+  // never while the root admin acts as a member, the platinum holder included (design document 1.38)
+  return s.mode === 'remote' && !s.actingAs && (s.rootAdmin || (!!s.me && s.seats.some(x => x.tier === 'platinum' && x.holder === s.me)));
 }
 
 async function accessWrite(act: AccessAct, done: string): Promise<boolean> {

@@ -88,6 +88,17 @@ Five tabs: الشجرة (the tree), القرابة (relations), الطلبات (
   entries as the keys and members screens, and renew the family key the same way
   when a phone or invite is taken away; tapping a seat or a member there opens
   this section. Spouses from outside the family have no such section.
+- **Acting as a member («العمل بصفته»):** on the profile of a member with a phone,
+  the root admin can act as them, to try what they say does not work: the app
+  shows what their phone shows (their place, what the privacy rule lets them see,
+  their key), and requests, approvals and refusals made there are theirs, counted
+  by the rules their phone meets. Each is an `as` entry signed with the root
+  admin's key, shown on every phone as «مشرف العائلة بصفة فلان», and the member's
+  أنا says how often. Their devices, recovery kit, Face ID lock and keys, and
+  whatever only the root admin or the platinum holder may do, are never reached:
+  the screens are hidden, the phone refuses to write anything else while acting,
+  and every phone ignores it if written anyway. A bar on top says so, with
+  «إنهاء»; reopening the app ends it too.
 
 ## Who gets in
 
@@ -116,6 +127,14 @@ Five tabs: الشجرة (the tree), القرابة (relations), الطلبات (
   cancels every invite that device made and nobody has opened yet, so a stolen
   phone's «إضافة جهاز» link cannot bring it back with the renewed key; the
   confirmation says so.
+- **iPhone and iPad: only from the Home Screen.** In any browser there (Safari
+  erases a site's storage after seven days without a visit, and never shares it
+  with the installed app), the app shows one screen instead of the family: a link
+  opened there is not taken up, only copied, to paste in the installed app with
+  «لصق رابط»; a member already in the browser taps «نقل حسابي إلى التطبيق» for a
+  one-time device link (ending `.m`), and the app, once in with it, removes the
+  browser from their devices; the root admin copies the admin link, then removes
+  it from the browser. A guest already there may stay; the sample opens there.
 - **Only real keys:** a claim links a phone only with a real public key (64 hex
   digits, not a small-order point), and every signature is checked strictly (RFC
   8032, noble's `zip215: false`), by phones and the server, so nobody can sign as

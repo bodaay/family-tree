@@ -34,13 +34,13 @@ LANE_A=(
   alias-search alias-merge alias-sample alias-review-merge alias-review-privacy
   mar-admin mar-member mar-sample mar-review-ext mar-review-privacy mar-review-regress
   int-old-invites int-old-access int-old-edit int-kit-rotation writegate-check+ int-merge-marriages pkeys
-  export export-pick
+  export export-pick act-as writegate-check+
 )
 LANE_B=(
   rekey-flow writegate-check+ rekey-triggers writegate-check+ rekey-review-dos writegate-check+ rekey-review-lockout writegate-check+
   lock-faceid lock-recovery lock-newphone lock-review-kit lock-review-lock
   multidev-add writegate-check+ multidev-remove writegate-check+ multidev-kit writegate-check+ multidev-admin writegate-check+
-  writegate-flow back edit-req delete-req double
+  writegate-flow back edit-req delete-req double iphone writegate-check+
 )
 LANE_C=(
   perm-profile perm-review-auth writegate-check+ perm-review-lists perm-review-seats merge-perm-device
@@ -51,7 +51,7 @@ LANE_C=(
   namesake ladder fcard counts minors scan genspan tabs tap3d kidslink kin-far milk
 )
 LANE_M1=(years widen hidden selfapprove decide kinname rekey-flow writegate-check+ mar-review-privacy int-old-invites milk writegate-check+)
-LANE_M2=(asks multidev-add writegate-check+ merge-perm-device death inlaws mar-admin alias-review-privacy perm-profile)
+LANE_M2=(asks multidev-add writegate-check+ merge-perm-device death inlaws mar-admin alias-review-privacy perm-profile act-as)
 
 # the family the tests were written against
 cp $FIXTURE $TMP/family.json || exit 1

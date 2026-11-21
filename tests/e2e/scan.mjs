@@ -1,7 +1,8 @@
 // Joining by scanning a QR code inside the app (an iPhone home-screen app never
-// receives tapped links), and the iPhone note that offers to carry an invite
-// into the installed app before accepting it in Safari. The camera is faked: a
-// canvas that shows a QR code. Needs a fresh local family.
+// receives tapped links), and an invite opened in Safari on an iPhone: not taken
+// up there (the family opens only in the app on the Home Screen, design
+// document 1.38), but copied, to paste in the installed app. The camera is
+// faked: a canvas that shows a QR code. Needs a fresh local family.
 //   node scan.mjs BASE admin-link-file [screenshots-dir]
 // Never prints links or keys: they stay inside the browser pages.
 import puppeteer from 'puppeteer-core';
@@ -98,12 +99,13 @@ try {
   check(!!link, 'the root admin made a personal invite');
   const I = await phone('I', { ua: IPHONE });
   await I.goto(link, { waitUntil: 'domcontentloaded' }); await wait(3500);
-  const note = await I.evaluate(() => { const c = document.querySelector('.join .card.iosfirst'); return c ? c.innerText.replace(/\s+/g, ' ') : null; });
-  check(!!note && note.includes('إضافة إلى الشاشة الرئيسية'), 'iPhone Safari: the invite offers to go into the installed app first');
+  const note = await I.evaluate(() => { const c = document.querySelector('.join.homescreen'); return c && c.querySelector('.card.carry') ? c.innerText.replace(/\s+/g, ' ') : null; });
+  check(!!note && note.includes('إضافة إلى الشاشة الرئيسية'), 'iPhone Safari: the invite is not taken up there, but offered to copy into the installed app');
+  check(await I.evaluate(() => !localStorage.getItem('ft-family') && !document.querySelector('.join button')?.textContent.startsWith('نعم')), 'nothing of the family is kept in Safari, and it cannot be accepted there');
   await shot(I, 'ios-invite');
   // a real tap on a focused page, as the clipboard requires
   await I.bringToFront();
-  await I.click('.join .card.iosfirst .btn'); await wait(500);
+  await I.click('.join.homescreen .card.carry .btn'); await wait(500);
   const said = (await store(I, m => m.getState().toast)) ?? '';
   const copied = await I.evaluate(() => navigator.clipboard.readText().then(t => t.includes('#join=') && t.includes('.i')));
   check(said.includes('نُسخ'), 'it says the link was copied · ' + said);
@@ -111,7 +113,7 @@ try {
   // not on other phones
   const A = await phone('A');
   await A.goto(link, { waitUntil: 'domcontentloaded' }); await wait(3500);
-  check(await A.evaluate(() => !!document.querySelector('.join h2') && !document.querySelector('.join .card.iosfirst')), 'not an iPhone: no such note');
+  check(await A.evaluate(() => !!document.querySelector('.join h2') && !document.querySelector('.join.homescreen')), 'not an iPhone: the invite opens as ever');
 
   // ---- the installed app: paste the copied link, accept there
   const H = await phone('H', { ua: IPHONE, installed: true });
@@ -123,8 +125,8 @@ try {
   await H.bringToFront();
   await H.evaluate(t => { const i = document.querySelector('.join input.bigin'); i.value = t; i.dispatchEvent(new Event('input', { bubbles: true })); }, copiedText);
   await click(H, 'انضمام'); await wait(3500);
-  const claim = await H.evaluate(() => ({ h2: document.querySelector('.join h2')?.textContent, note: !!document.querySelector('.join .card.iosfirst') }));
-  check(claim.h2 === 'دعوة شخصية' && !claim.note, 'the installed app shows the invite, without the Safari note');
+  const claim = await H.evaluate(() => ({ h2: document.querySelector('.join h2')?.textContent, note: !!document.querySelector('.join.homescreen') }));
+  check(claim.h2 === 'دعوة شخصية' && !claim.note, 'the installed app shows the invite, to accept there');
   await H.evaluate(() => [...document.querySelectorAll('.join button')].find(b => b.textContent.startsWith('نعم'))?.click()); await wait(3500);
   const me = await store(H, m => m.getState().me);
   check(me === 'p131', 'accepted in the installed app: it is his phone');

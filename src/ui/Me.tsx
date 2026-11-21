@@ -11,7 +11,7 @@ import { reloadApp } from '../update';
 import { TIER_AR, seatOf } from '../data/governance';
 import type { Seat } from '../data/types';
 import { Icon } from './icons';
-import { Avatar, PersonRow, Seg, SeatBadge } from './common';
+import { ActedFor, Avatar, PersonRow, Seg, SeatBadge } from './common';
 
 export function Me({ s }: { s: State }) {
   const g = s.graph;
@@ -46,11 +46,14 @@ export function Me({ s }: { s: State }) {
             <PersonRow s={s} id={s.me} onClick={() => set({ profile: s.me })} right={<SeatBadge s={s} id={s.me} />} />
             {!s.isSample && (
               <p class="hint">
-                {isMinorViewer(s)
-                  ? 'هذا الجهاز مرتبط بك. تشاهد الشجرة، والتعديل والطلبات متاحة من سن 18.'
-                  : `هذا الجهاز مرتبط بك${s.rootAdmin ? ' بصفتك مشرف العائلة' : ''}، وكل طلب أو اعتماد منه يُنسب إليك.`}
+                {s.actingAs
+                  ? `تعمل بصفة ${nameOf(s, s.actingAs)}: ترى التطبيق كما يراه، وكل طلب أو اعتماد أو رفض منك يُسجَّل باسم «مشرف العائلة بصفة ${nameOf(s, s.actingAs)}».${isMinorViewer(s) ? ' التعديل والطلبات متاحة من سن 18.' : ''}`
+                  : isMinorViewer(s)
+                    ? 'هذا الجهاز مرتبط بك. تشاهد الشجرة، والتعديل والطلبات متاحة من سن 18.'
+                    : `هذا الجهاز مرتبط بك${s.rootAdmin ? ' بصفتك مشرف العائلة' : ''}، وكل طلب أو اعتماد منه يُنسب إليك.`}
               </p>
             )}
+            {!s.isSample && <ActedFor s={s} id={s.me} />}
             {(s.isSample || s.rootAdmin) && (
               <button class="btn small" onClick={() => set({ searchOpen: 'me' })}>
                 تغيير
@@ -79,7 +82,19 @@ export function Me({ s }: { s: State }) {
       </section>
       )}
 
-      {!s.isSample && !s.guest && s.me && <MyDevices s={s} />}
+      {!s.isSample && !s.guest && s.me && !s.actingAs && <MyDevices s={s} />}
+      {s.actingAs && (
+        <section>
+          <h3>الأجهزة والأمان</h3>
+          <div class="card cta acting-note">
+            <Icon name="lock" />
+            <span>
+              <b>لا تُفتح بصفة غيرك</b>
+              <small>أجهزة {nameOf(s, s.actingAs)} ومفتاح استعادته وقفل البصمة ومفاتيحه لا يصل إليها العمل بصفته. ما سببه في هاتفه نفسه (إصدار قديم، أو تجديد لم يصله، أو القفل) يُرى على هاتفه.</small>
+            </span>
+          </div>
+        </section>
+      )}
 
       {!isInstalled() && (
         <section>
@@ -114,7 +129,7 @@ export function Me({ s }: { s: State }) {
       )}
 
       {/* in the sample family only to switch off a lock left on from a real family */}
-      {(!s.isSample || s.lock) && <Security s={s} />}
+      {(!s.isSample || s.lock) && !s.actingAs && <Security s={s} />}
 
       {s.isSample && <section>
         <h3>عرض التطبيق كـ</h3>
@@ -251,7 +266,7 @@ function Family({ s }: { s: State }) {
           <Icon name="refresh" size={16} /> إعادة البيانات التجريبية
         </button>
       )}
-      <button
+      {!s.actingAs && <button
         class="btn small"
         onClick={() =>
           confirm(s.isSample ? 'الخروج من العائلة التجريبية؟' : s.rootAdmin ? 'إزالة العائلة من هذا الجهاز؟ سيُحذف منه مفتاح المشرف أيضًا، وتحتاج رابط المشرف لاستعادته.' : 'إزالة العائلة من هذا الجهاز؟ ستحتاج رابط الدعوة للعودة.') &&
@@ -259,8 +274,8 @@ function Family({ s }: { s: State }) {
         }
       >
         <Icon name="x" size={16} /> {s.isSample ? 'الخروج من العائلة التجريبية' : 'إزالة العائلة من هذا الجهاز'}
-      </button>
-      {!s.isSample && (
+      </button>}
+      {!s.isSample && !s.actingAs && (
         <p class="hint">
           {s.lock
             ? 'مفتاح العائلة محفوظ في هذا المتصفح مشفّرًا، ولا يُفتح إلا ببصمتك.'

@@ -29,6 +29,8 @@ export const C$ = await import(path.join(repo, 'src/core/crypto.ts'));
 export const D$ = await import(path.join(repo, 'src/data/devices.ts'));
 
 export const wait = ms => new Promise(r => setTimeout(r, ms));
+/** A screenshot into the run's folder (SHOTS), when there is one: made-up names only. */
+export const shot = (p, name) => (process.env.SHOTS ? p.screenshot({ path: path.join(process.env.SHOTS, name + '.png') }) : Promise.resolve());
 export const browser = await puppeteer.launch({ executablePath: process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--hide-scrollbars'] });
 const errs = [];
 let failed = 0;
@@ -55,10 +57,21 @@ export async function until(fn, ms = 15000, step = 400) {
   }
 }
 
-/** A phone: its own browser context (storage, device key). Copy and share hand over what the app gives. */
-export async function phone(name, link) {
+/** Safari on an iPhone, as it says it is. */
+export const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+/** How a page runs: `ua` another browser's user agent (IPHONE); `installed` the app on the home screen. */
+async function dress(page, opts) {
+  if (opts.ua) await page.setUserAgent(opts.ua);
+  if (opts.installed) await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
+}
+/**
+ * A phone: its own browser context (storage, device key). Copy and share hand
+ * over what the app gives (window.__copied); «لصق رابط» pastes window.__paste.
+ */
+export async function phone(name, link, opts = {}) {
   const page = await (await browser.createBrowserContext()).newPage();
   await page.setViewport({ width: 412, height: 915, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await dress(page, opts);
   page.on('pageerror', e => errs.push(name + ': ' + e.message + ' @ ' + (e.stack || '').split('\n').slice(1, 4).join(' <- ')));
   page.on('console', m => {
     if (m.type() === 'error') errs.push(name + ': ' + m.text());
@@ -69,7 +82,7 @@ export async function phone(name, link) {
   });
   await page.evaluateOnNewDocument(() => {
     window.__copied = null;
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async t => { window.__copied = t; } }, configurable: true });
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async t => { window.__copied = t; }, readText: async () => window.__paste ?? '' }, configurable: true });
   });
   if (link) {
     await page.goto(link, { waitUntil: 'networkidle0' });
@@ -85,9 +98,14 @@ export async function closeApp(p) {
   return ctx;
 }
 /** Opens the app again on a phone whose app was closed: what it does on its own when it opens. */
-export async function reopen(ctx, name) {
+export async function reopen(ctx, name, opts = {}) {
   const page = await ctx.newPage();
   await page.setViewport({ width: 412, height: 915, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await dress(page, opts);
+  await page.evaluateOnNewDocument(() => {
+    window.__copied = null;
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async t => { window.__copied = t; }, readText: async () => window.__paste ?? '' }, configurable: true });
+  });
   page.on('pageerror', e => errs.push(name + ': ' + e.message));
   page.on('console', m => {
     if (m.type() === 'error') errs.push(name + ': ' + m.text());

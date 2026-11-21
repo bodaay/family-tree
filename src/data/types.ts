@@ -169,6 +169,8 @@ export interface ExportRec {
   at: number;
   /** Signed with the root admin's key. */
   admin: boolean;
+  /** Made by the root admin acting as `by` (design document 1.38). */
+  via?: boolean;
   what: ExportWhat;
   ok: boolean;
 }
@@ -218,6 +220,8 @@ export interface Approval {
   by: string;
   at: number;
   override?: boolean;
+  /** Given by the root admin acting as `by` (design document 1.38; worked out by the replay, never written). */
+  via?: boolean;
 }
 
 export interface Tx {
@@ -232,6 +236,8 @@ export interface Tx {
   status: 'pending' | 'approved' | 'rejected';
   approvals: Approval[];
   rejectedBy?: string;
+  /** Refused by the root admin acting as `rejectedBy` (worked out by the replay, never written). */
+  rejectedVia?: boolean;
   revertOf?: string;
   /** Made directly by the root admin. */
   direct?: boolean;
@@ -241,4 +247,6 @@ export interface Tx {
   closed?: boolean;
   /** The level and branch its sender wrote, when they differ from what every phone works out (worked out by the replay, never written). */
   declared?: { level: Level; branch: string | null };
+  /** Sent by the root admin acting as `by` (design document 1.38; worked out by the replay, never written). */
+  via?: boolean;
 }

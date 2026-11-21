@@ -4,7 +4,7 @@
 // and every screen built from it, only ever meets the shapes it knows. Kinds
 // this version does not know (a newer version's) pass through untouched: the
 // replay ignores them. Only fields the app reads are checked, and only their type.
-import type { Payload } from './log.ts';
+import { AS_TYPES, type Payload } from './log.ts';
 import { bundleShape, sealedShape } from './personkeys.ts';
 
 type Obj = Record<string, unknown>;
@@ -186,6 +186,9 @@ export function wellFormed(p: unknown): p is Payload {
       return list(p.boxes, bundleShape) && (p.boxes as unknown[]).length >= 1 && (p.boxes as unknown[]).length <= 40;
     case 'export':
       return str(p.code) && CODE.test(p.code as string) && by(p.by) && exportWhat(p.what);
+    case 'as':
+      // one level only, and only what a member does about the tree
+      return str(p.person) && isObj(p.p) && AS_TYPES.has(p.p.type as string) && wellFormed(p.p);
     default:
       return true;
   }

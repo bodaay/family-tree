@@ -103,7 +103,10 @@ Cloudflare's current plans and limits.)
 
 4. **On the root admin's phone:** open the admin link (or scan the QR code), add the
    app to the Home Screen, turn on the Face ID lock (أنا → الأمان), and make a
-   recovery kit kept somewhere safe and offline. Then mark the main branches, hand
+   recovery kit kept somewhere safe and offline. On an iPhone or iPad the family
+   opens only in the app on the Home Screen: Safari, opening the link, offers to
+   copy it; add the app to the Home Screen, open it, and paste the link with
+   «لصق رابط» (or scan the QR code from the app). Then mark the main branches, hand
    out the leadership keys, and invite members from the app (الإدارة). Delete the
    link files from your computer once the root admin's phone and kit are set up,
    or keep them only where nobody else can read them.

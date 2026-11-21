@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="doc-version" content="1.37">
+<meta name="doc-version" content="1.38">
 <title>Family Tree — Design Document</title>
 <style>
   /* Arabic words use the app's own font (public/fonts, SIL Open Font License),
@@ -36,7 +36,7 @@
     size: A4;
     margin: 17mm 16mm 18mm 16mm;
     @bottom-left {
-      content: "Family Tree · Design Document · Draft 1.37 · GNU AGPL 3.0";
+      content: "Family Tree · Design Document · Draft 1.38 · GNU AGPL 3.0";
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       font-size: 7.5pt;
       color: #7a878d;
@@ -223,7 +223,7 @@
     </g>
   </svg>
 
-  <div class="kicker">Design document · Draft 1.37</div>
+  <div class="kicker">Design document · Draft 1.38</div>
   <div class="title-ar ar" style="text-align:left;direction:rtl;display:block;">شجرة العائلة</div>
   <h1 class="title">Family Tree</h1>
   <div class="sub">A private, end-to-end encrypted family archive<br>built to last for generations</div>
@@ -232,7 +232,7 @@
   <div class="meta">
     <span class="pill">For review</span><br>
     <b>Audience:</b> whoever builds, runs or reviews the app, and a family's key holders<br>
-    <b>Status:</b> Draft 1.37: the code published, without the family<br>
+    <b>Status:</b> Draft 1.38: the root admin acting as a member; iPhones from the Home Screen<br>
     <b>Date:</b> 21 November 2026<br>
     <b>License:</b> published with the code under the GNU AGPL 3.0
   </div>
@@ -248,13 +248,14 @@
 </div>
 
 <div class="callout ok">
-  <span class="label">New in version 1.37</span>
-  <p>Built and tested on 21 November 2026: <b>the code published, without the family</b> (Section 8, "The published code"). The app's code, its tests and this document are public under the GNU AGPL 3.0 (<code>github.com/bodaay/family-tree</code>), so other families can run their own copy and anyone can read what the app does. Nothing of this family goes with it: the public edition is written from the family's private repository by a script that leaves out the family's data, keys and site, and stops if any name, id, address or secret of the family turns up in what would go out. The browser tests now run on a <b>made-up family</b> of 800 people instead of a copy of this one. The Node server is ready to run a family's own site: starting a family needs the create token there too, and it sends the same security headers as Cloudflare. A deployment guide (<code>docs/deploy.md</code>) covers Cloudflare and a server of one's own. The made-up family also found three faults this family's own shape never showed, now fixed: a full name typed for a spouse from outside now leaves out a family name of two words (<span class="ar">«آل مبارك»</span>) as it did one of one word; the 3D tree no longer trips for a moment over someone just removed; and a long name beside a key and its button on a narrow phone wraps instead of spilling out of its row.</p>
+  <span class="label">New in version 1.38</span>
+  <p>Built and tested on 21 November 2026. <b>The root admin can act as a member</b> (Section 4, "Acting as a member"). When someone says the app does not let them do something, the root admin opens their profile, taps <span class="ar">«العمل بصفته»</span> and sees the app as that member's phone shows it: their place in the tree, what the privacy rule lets them see, and their key. The root admin can then send, approve and refuse as them, to try what they tried. Every entry made this way is signed with the root admin's key, counts for the member only by the rules their own phone would meet, and shows on every phone as <span class="ar">«مشرف العائلة بصفة …»</span>; the member's own <span class="ar">«أنا»</span> says how often, and when last. Their devices, recovery kit, Face ID lock and keys are never reached this way, nor anything only the root admin or the platinum holder may do. <b>On an iPhone or iPad the family opens only from its app on the Home Screen</b> (Section 9, "Installing it as an app"). Safari erases a site's storage, the family's keys with it, after seven days without a visit, and never shares it with the installed app. A link opened in Safari is now only copied, to paste in the app with <span class="ar">«لصق رابط»</span>. A member already in Safari moves into the app with <span class="ar">«نقل حسابي إلى التطبيق»</span>, and the root admin copies the admin link and then removes it from Safari.</p>
 </div>
 
 <div class="callout ok">
   <span class="label">Earlier versions</span>
   <ul>
+    <li><b>1.37:</b> the code published, without the family, under the GNU AGPL 3.0; the browser tests on a made-up family; the Node server ready to run a family's own site.</li>
     <li><b>1.36:</b> milk kinship (<span class="ar">الرضاعة</span>).</li>
     <li><b>1.35:</b> the browser tests in the repository.</li>
     <li><b>1.34:</b> a route through an ancestor the other comes from another way.</li>
@@ -334,6 +335,8 @@
     <li>The server's write check</li>
     <li>The review's fixes: removed devices' invites, no going back to an older log, real keys only</li>
     <li><span class="ar">«الصلاحيات»</span> and <span class="ar">«جهاز جديد»</span> on profiles</li>
+    <li>The root admin acting as a member (<span class="ar">«العمل بصفته»</span>), recorded for all to see</li>
+    <li>iPhones from the Home Screen only; <span class="ar">«نقل حسابي إلى التطبيق»</span></li>
     <li>A plain copy of the family in the repository (<code>family.json</code>)</li>
   </ul></div>
   <div class="card" style="border-top:4px solid var(--sand)"><h4>Not built yet</h4><ul class="small" style="margin:1mm 0 0">
@@ -346,7 +349,7 @@
     <li>A second copy kept automatically elsewhere; post-quantum protection</li>
   </ul></div>
 </div>
-<p class="small muted">Several devices, automatic renewals, the recovery kit as a backup key, the write check, the review's fixes, everything new in version 1.7, the fixes of version 1.8, <span class="ar">«ربط أبناء»</span> of version 1.9 the root admin's decisions on requests of version 1.10, the women's privacy setting of version 1.11, back and refresh of version 1.12, the duplicate question switched off in version 1.13, the names of daughters' children and the spouse suggestions of version 1.14, the limit on requests of version 1.15, the mourning band of version 1.16, the generation view of version 1.17, key holders approving their own of version 1.18, approval as it is sent of version 1.19 went live with the deploys of 1 November 2026, and the levels worked out on every phone of version 1.20 deaths as requests of version 1.21, opening with no connection of version 1.22, the copy of the log of version 1.23, relations by marriage of version 1.24, per-person keys of version 1.26 (the move made by the root admin the same day), the version check of version 1.27, the fix of version 1.28, and the rest of privacy and keys of version 1.29 on 2 November, and exporting the tree of version 1.30, with the corrections by anyone of version 1.31 and removals by request of version 1.32, on 3 November, and every way two people are related, of version 1.33, and the routes through an ancestor the other comes from another way, of version 1.34, on 6 November, and milk kinship, of version 1.36, on 16 November; the write check takes hold once the root admin's phone registers the write key (Section 8). <b>Not tested yet on the family's own phones:</b> which of them give the Face ID lock its PRF secret, and how long Argon2id takes on the oldest (Sections 7 and 12).</p>
+<p class="small muted">Several devices, automatic renewals, the recovery kit as a backup key, the write check, the review's fixes, everything new in version 1.7, the fixes of version 1.8, <span class="ar">«ربط أبناء»</span> of version 1.9 the root admin's decisions on requests of version 1.10, the women's privacy setting of version 1.11, back and refresh of version 1.12, the duplicate question switched off in version 1.13, the names of daughters' children and the spouse suggestions of version 1.14, the limit on requests of version 1.15, the mourning band of version 1.16, the generation view of version 1.17, key holders approving their own of version 1.18, approval as it is sent of version 1.19 went live with the deploys of 1 November 2026, and the levels worked out on every phone of version 1.20 deaths as requests of version 1.21, opening with no connection of version 1.22, the copy of the log of version 1.23, relations by marriage of version 1.24, per-person keys of version 1.26 (the move made by the root admin the same day), the version check of version 1.27, the fix of version 1.28, and the rest of privacy and keys of version 1.29 on 2 November, and exporting the tree of version 1.30, with the corrections by anyone of version 1.31 and removals by request of version 1.32, on 3 November, and every way two people are related, of version 1.33, and the routes through an ancestor the other comes from another way, of version 1.34, on 6 November, and milk kinship, of version 1.36, on 16 November, and the fixes of version 1.37 and acting as a member and iPhones from the Home Screen of version 1.38, on 21 November; the write check takes hold once the root admin's phone registers the write key (Section 8). <b>Not tested yet on the family's own phones:</b> which of them give the Face ID lock its PRF secret, and how long Argon2id takes on the oldest (Sections 7 and 12).</p>
 
 <h2>Five principles</h2>
 <div class="grid2">
@@ -666,6 +669,7 @@
     <li>Add their own line: pick the nearest ancestor already in the tree, then type the names down to themselves</li>
     <li>Add, edit, move, merge and delete people directly, without waiting for approvals, and undo any change; renew the family key by hand</li>
     <li>Approve or reject any member's request alone, at once, whatever its level and whether or not the branch has key holders</li>
+    <li>Act as a member with a phone (<span class="ar">«العمل بصفته»</span>, version 1.38, below), to try what they say does not work</li>
     <li>Members and invites, the key seats, view-all and the family key are on a tab of their own, <span class="ar">«الإدارة»</span> (Section 9); the person-by-person tools stay on each profile</li>
   </ul></div>
   <div class="card"><h4>The safeguards</h4><ul class="small" style="margin:1mm 0 0">
@@ -675,8 +679,22 @@
     <li>Deleting someone with descendants asks first, and says how many</li>
     <li>Sees every name, because they invite and manage everyone</li>
     <li>The admin link stays private: whoever holds it acts as the root admin</li>
+    <li>Acting as a member is in the record on every entry it makes, for the whole family to see, and never reaches the member's devices or keys</li>
   </ul></div>
 </div>
+
+<h3>Acting as a member (<span class="ar">«العمل بصفته»</span>) <span class="tag built">Built</span></h3>
+<p>When a member says something does not work for them (a key holder who cannot edit, say), the root admin needs to see what that member sees, and to try what they tried. Before version 1.38 that meant inviting a test phone in their name. Now the root admin taps <span class="ar">«العمل بصفته»</span> on the member's <span class="ar">«الصلاحيات»</span> (with the Face ID lock on, after Face ID), confirms, and the root admin's own phone becomes that member's, until <span class="ar">«إنهاء»</span>:</p>
+<ul>
+  <li><b>What it shows:</b> the app as that member's phone shows it: their place in the tree and their relations, the names the privacy rule lets them see (not every name, as the root admin sees), their key and what it approves, the requests they may approve, and the buttons they get. A bar across the top of every screen says <span class="ar">«تعمل بصفة فلان · كل ما تفعله يُسجَّل · إنهاء»</span>.</li>
+  <li><b>What it does:</b> everything a member does about the tree, as theirs: sending requests (adding, editing, a death, a marriage, a removal, an undo), approving and refusing with their key, a request their own key covers approved as it is sent, how far a woman's details are seen, and exporting a chart within their key. Each counts only by the rules their own phone would meet (their key at that point in the log, the family's limit on requests, under 18), and fails where theirs would. That is the point: a read-only view could not show why saving fails.</li>
+  <li><b>What it never reaches:</b> the member's devices (<span class="ar">«أجهزتي»</span>: adding, renaming, removing), their recovery kit, the Face ID lock, their keys and invites; anything only the root admin or the platinum holder may do (view all, guests, the family's settings, the seats, renewing the family key), the platinum holder's included; and hidden marriages, which are only between their three people. In the app, those screens are not shown; underneath, the phone refuses to write any other kind of entry while acting, and every phone ignores one if it is written all the same.</li>
+  <li><b>How it is recorded:</b> each entry is an acting entry, signed with the root admin's key and naming the member, with the request, approval or refusal inside. On every phone, the member's own included, the request shows <span class="ar">«مشرف العائلة بصفة فلان يطلب»</span>, an approval <span class="ar">«اعتمده: مشرف العائلة بصفة فلان»</span> and the history <span class="ar">«أرسله مشرف العائلة بصفة فلان»</span>. The member's <span class="ar">«أنا»</span>, and their profile on the root admin's phone, say how often the root admin acted as them, and when last.</li>
+  <li><b>Who:</b> any member with a phone in the family, never the root admin's own place, and never someone with no phone (there is nothing of theirs to try). Every phone checks the same.</li>
+  <li><b>It ends</b> with <span class="ar">«إنهاء»</span>, when the app is opened again, when the Face ID lock locks it, or by itself if the member is removed or loses their last phone.</li>
+  <li><b>Its limits:</b> what is particular to the member's own phone does not show this way: an older version of the app on it, a renewal of the family key that has not reached it, its lock or its storage. After the move to per-person keys the root admin's phone holds every woman's key, so it may open a woman's details the rule allows the member to see but whose key their phone was not handed yet.</li>
+</ul>
+<p>It gives the root admin no power over the tree they did not have already (they may decide any request alone): it lets them see and try what a member sees, and leaves the family a record of each time. Older versions of the app do not know an acting entry and would see a request still waiting that is approved, so it is a new format of the app (6): once an updated phone has written, an older one is told to update before it saves.</p>
 <div class="callout">
   <span class="label">Changed since version 1.2</span>
   <p>Version 1.2 had the founder's special powers end once the first keys were handed out. In practice the family needs a root admin for longer: many branches have no key holders yet, and the tree is still being filled in. How the role is phased out, so that the keys alone govern a mature family, is now an open question (Section 13).</p>
@@ -822,6 +840,7 @@
   <li><b>Limits:</b> up to 10 devices and waiting invites for each person through their own entries, and two invites of their own waiting at a time. The root admin is not limited.</li>
   <li><b>A removed device's invites go with it.</b> Removing a device (by the member, or by the root admin's unlink, <span class="ar">«جهاز جديد»</span> or <span class="ar">«فصل كل أجهزته»</span>) also cancels every invite that device made and nobody has opened yet, and the confirmation says so. Otherwise someone holding a stolen phone could keep its <span class="ar">«إضافة جهاز»</span> link, and come back through it, with the renewed key, after the phone was removed.</li>
   <li><b>Every removal renews the family key</b>, because the removed phone still holds it (Section 6). Guests stay on one device.</li>
+  <li><b>Moving out of Safari on an iPhone</b> (version 1.38): a device of the person's own, made by Safari for the app on the Home Screen, which removes Safari from the person's devices once it is in (Section 9, "Installing it as an app").</li>
 </ul>
 
 <h2>View all and guests <span class="tag built">Built</span></h2>
@@ -1123,10 +1142,10 @@
     <tr><td><code>w</code></td><td>The <b>write signature</b>, made with the write key of the family key that sealed the entry, over the entry's fingerprint (below). Entries from before the write check have none</td><td>Yes, and checks it</td></tr>
     <tr><td><code>nw</code></td><td>Only on a renewal of the family key, or when the root admin registers the write key: the public write key the server asks for from the next entry on</td><td>Yes</td></tr>
     <tr><td><code>ns</code></td><td>The signer's signature over <code>nw</code> and the entry's fingerprint, so nobody can swap it</td><td>Yes, and checks it</td></tr>
-    <tr><td><code>app</code></td><td>The version of the app that wrote it (2 since version 1.27; entries from before have none, and count as 1). Not signed: only the server uses it (below)</td><td>Yes, and checks it</td></tr>
+    <tr><td><code>app</code></td><td>The version of the app that wrote it (2 since version 1.27, 6 since version 1.38; entries from before have none, and count as 1). Not signed: only the server uses it (below)</td><td>Yes, and checks it</td></tr>
   </tbody>
 </table>
-<p>Inside <code>ct</code> is one of: the <b>seed</b> (the family as first entered); a <b>proposal</b> (a change, with its before and after values); an <b>approval</b> or <b>rejection</b>; a <b>root-admin act</b> (main branches, seats, invites, unlinking, a direct change); a <b>claim</b> (an invite linking a phone); a <b>device act</b> (a person's own devices: an invite for another one, adding, renaming or removing one); an <b>access act</b> (view-all and guests); a <b>widening</b> of who sees one woman's details; a <b>private entry</b> (a hidden marriage: boxes for its three people, Section 4); or a <b>write-key registration</b> by the root admin (below).</p>
+<p>Inside <code>ct</code> is one of: the <b>seed</b> (the family as first entered); a <b>proposal</b> (a change, with its before and after values); an <b>approval</b> or <b>rejection</b>; a <b>root-admin act</b> (main branches, seats, invites, unlinking, a direct change); a <b>claim</b> (an invite linking a phone); a <b>device act</b> (a person's own devices: an invite for another one, adding, renaming or removing one); an <b>access act</b> (view-all and guests); a <b>widening</b> of who sees one woman's details; a <b>private entry</b> (a hidden marriage: boxes for its three people, Section 4); an <b>acting entry</b> (the root admin acting as a member, with that member's request, approval, refusal, widening or export inside, Section 4); or a <b>write-key registration</b> by the root admin (below).</p>
 
 <h3>How phones replay it</h3>
 <p>Each phone downloads the entries, checks every signature and every link in the chain, decrypts them, and rebuilds the family in order. As it goes, every phone applies the same rules:</p>
@@ -1134,11 +1153,12 @@
   <li><b>The root admin</b> is whoever signed entry 0. Root-admin acts count only if they are signed with that same key.</li>
   <li><b>Access acts</b> (view-all, guests) count only if signed by the root admin, or by the phone linked to whoever holds the platinum key <i>at that point in the log</i>.</li>
   <li><b>Claims</b> must be signed with the invite's own key. Each invite links one phone, once, and a phone linked to one person cannot be claimed for another. The phone's key must be a real public key (not a small-order point, for which anyone could make a signature without a secret).</li>
-  <li><b>Strict checks:</b> a proposal or approval counts only if it comes from the phone linked to the person it is made in the name of. (The sample family, which never leaves one phone, has a "view as" switch for demonstrations; a real family has none.)</li>
+  <li><b>Strict checks:</b> a proposal or approval counts only if it comes from the phone linked to the person it is made in the name of, or from the root admin acting as them (rule 9). (The sample family, which never leaves one phone, has a "view as" switch for demonstrations; a real family has none.)</li>
   <li><b>Approvals</b> count only if, at that point in the log, the approver held a key allowed to approve that request; a change applies once it has every approval it needs.</li>
   <li><b>A request about someone not in the tree</b> (removed since, or never there) is closed, and shown in the history as <span class="ar">«أُغلق: من يخصه الطلب ليس في الشجرة»</span>: nobody could approve it, and it would wait for ever.</li>
   <li><b>Device acts</b> count only if signed by one of that person's own devices, within the limits of Section 4; a key added as a device must sign for itself, for that person and that family.</li>
   <li><b>Renewals</b> of the family key count only from the root admin or the platinum holder's phone, only if they reach everyone who keeps access, and only if the root admin's own copy opens, so no renewal can shut the root admin out. Other entries count only if sealed with the key in force when they were written.</li>
+  <li><b>Acting entries</b> (version 1.38) count only if signed with the root admin's key, about a member with a phone in the family at that point (never the root admin's own place), and only for a request, an approval, a refusal, a widening or an export. What they carry is then checked exactly as from one of that member's phones and counts as the member's, marked as the root admin's in the record. What only the root admin or the platinum holder may do never counts this way, the platinum holder's included.</li>
 </ol>
 <p>An entry that breaks a rule is simply ignored by every phone, even though the server stored it. An unlinked phone, an invite that was already used, or an approval from someone without the right key changes nothing.</p>
 <p><span class="tag built">Built</span> <b>A phone never goes back.</b> Each phone remembers how far it has read the log (how many entries, and the hash of the last). If a server later serves fewer entries, or other ones (an old backup restored, or a fork), the phone says so and neither opens nor writes to it. Otherwise it would fall back to a family key it had seen replaced, and write with it where a removed phone could read. (Whoever serves the app's code could do worse; this guards against storage rolled back.)</p>
@@ -1497,7 +1517,7 @@
   <li>A <b>private repository</b> of the family's own may hold its data (<code>data/family/</code>) and deploy token beside the code, so that more than one person can rebuild and deploy; the public code ignores <code>data/</code>.</li>
   <li><b>Never in git:</b> the family key, the admin link, invite links and the family-creation token. They stay in <code>data/secrets/</code>, which git ignores. Whoever had them could read the family or act as its root admin, and git history keeps everything forever.</li>
   <li><b>Deploying</b> is one command (<code>npm run deploy</code>) after a one-time Cloudflare login, with <code>family.json</code> synced first; the README has the steps, and how to rebuild these PDFs.</li>
-  <li><b>Tests</b> <span class="tag built">Built</span>, run before every release: unit tests without a browser (<code>scripts/test-*.ts</code>: keys, devices, the server's write check, junk entries, kinship, the export's layout, and since version 1.37 the Node server as a family's site runs it), and browser tests (<code>tests/e2e</code>, <code>npm run test:e2e</code>): 78 scripts driving Chrome as several phones at once, about 2,415 checks in about 40 minutes. Each runs on a fresh local family built from a made-up one (<code>tests/e2e/fixture/family.json</code>: 800 people, every name and year invented; version 1.37), on local servers whose data and links stay in a temporary folder: the tests never touch the live site, and never print links or keys.</li>
+  <li><b>Tests</b> <span class="tag built">Built</span>, run before every release: unit tests without a browser (<code>scripts/test-*.ts</code>: keys, devices, the server's write check, junk entries, kinship, the export's layout, and since version 1.37 the Node server as a family's site runs it), and browser tests (<code>tests/e2e</code>, <code>npm run test:e2e</code>): 80 scripts driving Chrome as several phones at once (since version 1.38 also as an iPhone, in Safari and from the Home Screen), about 2,500 checks in about 40 minutes. Each runs on a fresh local family built from a made-up one (<code>tests/e2e/fixture/family.json</code>: 800 people, every name and year invented; version 1.37), on local servers whose data and links stay in a temporary folder: the tests never touch the live site, and never print links or keys.</li>
 </ul>
 
 <h2>The published code <span class="tag built">Built</span></h2>
@@ -1533,6 +1553,13 @@
 <ul>
   <li><b>The app describes itself to the phone</b> (a web app manifest): on the Home Screen it carries the app's name (<span class="ar">«العائلة»</span> as it comes; each family sets its own), opens full screen without the browser bar, and uses Android-shaped ("maskable") icons that fit whatever icon shape the phone uses.</li>
   <li><b>An install button inside the app</b> (in the <span class="ar">أنا</span> tab): on browsers that offer installing (Chrome, Edge, Brave), one tap installs it. Where the browser offers no button, as on iPhone, the app shows that browser's own menu steps instead, such as Safari's Share → "Add to Home Screen".</li>
+  <li><span class="tag built">Built</span> <b>On an iPhone or iPad, only from the Home Screen</b> (version 1.38). Safari erases a site's storage after seven days without a visit, and with it the family's keys on that phone; an app on the Home Screen is spared. Safari and the installed app never share what they store, so every switch between them made another device. In any browser on an iPhone or iPad (Safari, Chrome, or one inside another app), the app shows one screen instead of the family: the steps (Share → "Add to Home Screen", open the app, paste), and:
+    <ul>
+      <li><b>A link opened there</b> (an invite, a device link, the admin link, a recovery link) is not taken up: nothing of the family is kept in the browser, and the link is offered to copy (<span class="ar">«نسخ الرابط»</span>). Links on an iPhone always open in the browser, never in the installed app (only App Store apps may claim them), so the app pastes them with one tap: <span class="ar">«لصق رابط»</span> on its first screen (iOS asks with its own "Paste" bubble).</li>
+      <li><b>A member already in the browser</b> (from before this rule) gets <span class="ar">«نقل حسابي إلى التطبيق»</span>: a one-time device link of theirs (Section 4, "Several devices per member") to paste in the app. Once the app is in with it, the app removes the browser from their devices, the family key is renewed as for any removed device, and the browser, opened again, says the access moved to the app and keeps nothing. Their recovery kit stays as it was.</li>
+      <li><b>The root admin in the browser</b> copies the admin link (after Face ID, with the lock on), opens the app with it, and then removes the admin's access from the browser (<span class="ar">«حذف دخول المشرف من هذا المتصفح»</span>, which also unlinks the browser from the root admin's place if it was linked). Invite links saved in the browser do not move: whoever they were sent to still holds them, and a new one can be made from the app.</li>
+      <li><b>An invite opened in the browser before this rule</b>, not yet accepted, is offered to copy in the same way. A guest already in the browser may stay there; the sample family opens there too.</li>
+    </ul></li>
 </ul>
 
 <h2>What a browser can do today</h2>
@@ -1868,7 +1895,7 @@
 
 <!-- ================= B. DECISION LOG ================= -->
 <h1 id="sb" class="newpage"><span class="num">B</span>Decision log</h1>
-<p class="muted">Decisions made in the design discussions of 30–31 October 2026, and while building the app. Decisions 36–59 were new in version 1.2; decisions 60–81 are new in version 1.3; decisions 82–87 are new in version 1.4; decisions 88–95 are new in version 1.5; decisions 96–100 are new in version 1.6; decisions 101–111 are new in version 1.7; decisions 112–113 are new in version 1.8; decision 114 is new in version 1.9; decision 115 is new in version 1.10; decision 116 is new in version 1.11; decisions 117–118 are new in version 1.12; decision 119 is new in version 1.13; decisions 120–121 are new in version 1.14; decision 122 is new in version 1.15; decision 123 is new in version 1.16; decision 124 is new in version 1.17; decision 125 is new in version 1.18; decision 126 is new in version 1.19; decision 127 is new in version 1.20; decision 128 is new in version 1.21; decision 129 is new in version 1.22; decision 130 is new in version 1.23; decision 131 is new in version 1.24; decision 132 is new in version 1.25, built in version 1.26; decisions 133–134 are new in version 1.27; decision 135 is new in version 1.28; decisions 136–139 are new in version 1.29; decisions 140–143 are new in version 1.30; decisions 144–145 are new in version 1.31; decision 146 is new in version 1.32; decision 147 is new in version 1.33; decision 148 is new in version 1.34; decision 149 is new in version 1.35; decision 150 is new in version 1.36. <b>Built</b> means it is in the app, tested and live (since the deploys of 1–6 November 2026 for 6, 14, 52, 82–93 and 101–148; 149 since 15 November; 32 and 150 since 16 November; 151–153 since 21 November); <b>Decided</b> means agreed but not built yet.</p>
+<p class="muted">Decisions made in the design discussions of 30–31 October 2026, and while building the app. Decisions 36–59 were new in version 1.2; decisions 60–81 are new in version 1.3; decisions 82–87 are new in version 1.4; decisions 88–95 are new in version 1.5; decisions 96–100 are new in version 1.6; decisions 101–111 are new in version 1.7; decisions 112–113 are new in version 1.8; decision 114 is new in version 1.9; decision 115 is new in version 1.10; decision 116 is new in version 1.11; decisions 117–118 are new in version 1.12; decision 119 is new in version 1.13; decisions 120–121 are new in version 1.14; decision 122 is new in version 1.15; decision 123 is new in version 1.16; decision 124 is new in version 1.17; decision 125 is new in version 1.18; decision 126 is new in version 1.19; decision 127 is new in version 1.20; decision 128 is new in version 1.21; decision 129 is new in version 1.22; decision 130 is new in version 1.23; decision 131 is new in version 1.24; decision 132 is new in version 1.25, built in version 1.26; decisions 133–134 are new in version 1.27; decision 135 is new in version 1.28; decisions 136–139 are new in version 1.29; decisions 140–143 are new in version 1.30; decisions 144–145 are new in version 1.31; decision 146 is new in version 1.32; decision 147 is new in version 1.33; decision 148 is new in version 1.34; decision 149 is new in version 1.35; decision 150 is new in version 1.36; decisions 151–153 are new in version 1.37; decisions 154–156 are new in version 1.38. <b>Built</b> means it is in the app, tested and live (since the deploys of 1–6 November 2026 for 6, 14, 52, 82–93 and 101–148; 149 since 15 November; 32 and 150 since 16 November; 151–156 since 21 November); <b>Decided</b> means agreed but not built yet.</p>
 <table class="compact tight">
   <thead><tr><th class="c" style="width:5%">#</th><th>Decision</th><th class="c" style="width:18%">Status</th></tr></thead>
   <tbody>
@@ -2025,6 +2052,9 @@
     <tr><td class="c">151</td><td>The code, its tests and this document are published under the GNU AGPL 3.0, without any family's data: a separate public repository, written from the family's private one by a script that leaves out the family's data, keys and site and stops on any trace of the family (names, ids, address, secrets)</td><td class="c"><span class="tag built">Built</span></td></tr>
     <tr><td class="c">152</td><td>The browser tests run on a made-up family of 800 people, from a fixed seed, with the people they look up placed by hand under names checked against the family; never on a copy of a real family</td><td class="c"><span class="tag built">Built</span></td></tr>
     <tr><td class="c">153</td><td>The Node server can run a family's own site: it asks for the create token when one is set, sends the security headers of <code>public/_headers</code> and listens where told; a guide covers Cloudflare and a server of one's own</td><td class="c"><span class="tag built">Built</span></td></tr>
+    <tr><td class="c">154</td><td>The root admin may act as any member with a phone (<span class="ar">«العمل بصفته»</span>), to try what they say does not work: the app as their phone shows it, and their requests, approvals and refusals, counted by the rules their phone meets. Not read-only, since a view cannot show why saving fails; never as the root admin's own place or someone with no phone</td><td class="c"><span class="tag built">Built</span></td></tr>
+    <tr><td class="c">155</td><td>Acting as a member is recorded on every entry it makes, signed with the root admin's key, and shown on every phone as <span class="ar">«مشرف العائلة بصفة فلان»</span>, with a count on the member's own <span class="ar">«أنا»</span>; it never reaches their devices, recovery kit, Face ID lock or keys, nor what only the root admin or the platinum holder may do, nor hidden marriages. A new app format (6), so an older phone updates before it saves</td><td class="c"><span class="tag built">Built</span></td></tr>
+    <tr><td class="c">156</td><td>On an iPhone or iPad the family opens only from its app on the Home Screen: a link opened in a browser is only copied, to paste in the app (<span class="ar">«لصق رابط»</span>); a member already in the browser moves with a one-time device link, after which the app removes the browser; the root admin copies the admin link, then removes it from the browser</td><td class="c"><span class="tag built">Built</span></td></tr>
   </tbody>
 </table>
 

@@ -1,40 +1,21 @@
 import { useState } from 'preact/hooks';
-import { joinFamily, trySample, leaveFamily, claimInvite, currentMembership, set, toast, type State } from '../data/store';
-import { personalLink } from '../data/backend';
+import { joinFamily, trySample, leaveFamily, claimInvite, set, toast, type State } from '../data/store';
 import { nasab, shownName } from '../data/graph';
-import { isIOS, isInstalled } from '../install';
+import { isInstalled } from '../install';
 import { Icon } from './icons';
 import { Scan } from './Scan';
 
 /**
- * On iPhone, an app added to the home screen keeps its own storage and never
- * receives tapped links: an invite accepted in Safari stays in Safari. Before
- * accepting, offer to carry the invite into the app instead.
+ * «لصق رابط»: the link the clipboard holds (iOS asks with its own "Paste"
+ * bubble). An app on an iPhone's Home Screen never receives tapped links: they
+ * open in the browser, which copies them (HomeScreen.tsx), and the app pastes.
  */
-function IosFirst() {
-  if (!isIOS() || isInstalled()) return null;
-  const m = currentMembership();
-  if (!m?.invite) return null;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(personalLink(m, m.invite!));
-      toast('نُسخ رابط الدعوة');
-    } catch {
-      toast('تعذّر النسخ');
-    }
-  };
-  return (
-    <div class="card iosfirst">
-      <b>لاستخدامها في تطبيق على الشاشة الرئيسية</b>
-      <small>
-        الدعوة تُقبل مرة واحدة، والتطبيق المثبّت لا يرى ما قُبل في Safari. انسخ الرابط، ثم من زر المشاركة اختر «إضافة إلى الشاشة الرئيسية»، وافتح التطبيق وألصق
-        الرابط فيه.
-      </small>
-      <button class="btn small" onClick={copy}>
-        نسخ رابط الدعوة
-      </button>
-    </div>
-  );
+async function pasted(): Promise<string | null> {
+  try {
+    return await navigator.clipboard.readText();
+  } catch {
+    return null;
+  }
 }
 
 /** Shown until this device has joined a family (or is opening its log). */
@@ -65,7 +46,6 @@ export function Join({ s }: { s: State }) {
             <b>{c.label}</b>
           </div>
           <p>تشاهد الشجرة فقط، دون طلبات أو اعتمادات. يمكن لمن دعاك إنهاء المشاهدة في أي وقت، فتُحذف بيانات العائلة من هذا الهاتف.</p>
-          <IosFirst />
           <button class="btn primary" onClick={() => void claimInvite()}>قبول الدعوة</button>
           <button class="btn" onClick={leaveFamily}>ليست لي</button>
         </div>
@@ -100,7 +80,6 @@ export function Join({ s }: { s: State }) {
             <small>{nasab(s.graph, n.id, 4)}</small>
           </div>
           <p>{f ? 'هل أنتِ هي؟ يرتبط هذا الجهاز بكِ إلى جانب أجهزتكِ الأخرى' : 'هل أنت هو؟ يرتبط هذا الجهاز بك إلى جانب أجهزتك الأخرى'}، وكل طلب أو اعتماد منه يُنسب {f ? 'إليكِ' : 'إليك'}.</p>
-          <IosFirst />
           <button class="btn primary" onClick={() => void claimInvite()}>نعم، أنا {n.name}</button>
           <button class="btn" onClick={leaveFamily}>لست أنا</button>
         </div>
@@ -118,7 +97,6 @@ export function Join({ s }: { s: State }) {
             <small>{nasab(s.graph, n.id, 4)}</small>
           </div>
           <p>{f ? 'هل أنتِ هي؟ سيرتبط هذا الهاتف بكِ، وكل طلب أو اعتماد منه يُنسب إليكِ.' : 'هل أنت هو؟ سيرتبط هذا الهاتف بك، وكل طلب أو اعتماد منه يُنسب إليك.'}</p>
-          <IosFirst />
           <button class="btn primary" onClick={() => void claimInvite()}>نعم، أنا {shownName(n)}</button>
           <button class="btn" onClick={leaveFamily}>لست أنا</button>
         </div>
@@ -143,6 +121,17 @@ export function Join({ s }: { s: State }) {
         <p>تأكد أن الخادم يعمل وأن الرابط صحيح.</p>
         <button class="btn primary" onClick={() => location.reload()}>إعادة المحاولة</button>
         <button class="btn" onClick={leaveFamily}>استخدام رابط آخر</button>
+      </div>
+    );
+  }
+  if (s.ended && s.movedApp) {
+    // this browser moved its access into the app on the Home Screen, which then removed it
+    return (
+      <div class="join">
+        <div class="wl-mark"><Icon name="phone" size={30} /></div>
+        <h2>نُقل دخولك إلى التطبيق</h2>
+        <p>صار دخولك إلى شجرة {s.ended} في تطبيقها على الشاشة الرئيسية، فحُذفت بيانات العائلة ومفتاحها من هذا المتصفح. افتح العائلة من الشاشة الرئيسية.</p>
+        <button class="btn" onClick={() => set({ ended: null, movedApp: false })}>حسنًا</button>
       </div>
     );
   }
@@ -175,6 +164,18 @@ export function Join({ s }: { s: State }) {
       />
       {bad && <div class="warnbox">هذا ليس رابط دعوة صحيحًا.</div>}
       <button class="btn primary" onClick={() => setBad(!joinFamily(link))}>انضمام</button>
+      <button
+        class="btn"
+        onClick={() =>
+          void pasted().then(t => {
+            if (t === null) return toast('تعذّر اللصق: ألصق الرابط في الخانة أعلاه');
+            setLink(t);
+            setBad(!joinFamily(t));
+          })
+        }
+      >
+        لصق رابط
+      </button>
       <button class="btn" onClick={() => setScan(true)}>
         <Icon name="cam" size={18} /> مسح رمز الدعوة
       </button>

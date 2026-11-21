@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { set, openInvite, nameOf, canSee, canGrantAccess, appoint, vacate, setViewAll, createInvite, revokeKey, revokeKeys, replaceDevice, currentMembership, devicesOf, type State } from '../data/store';
+import { set, openInvite, nameOf, canSee, canGrantAccess, appoint, vacate, setViewAll, createInvite, revokeKey, revokeKeys, replaceDevice, currentMembership, devicesOf, mayActAs, actAs, type State } from '../data/store';
 import { savedInvites } from '../data/backend';
 import { SEATS, TIER_AR, seatOf, seatProblem } from '../data/governance';
 import type { Node } from '../data/graph';
 import type { Seat, Tier } from '../data/types';
 import { Icon } from './icons';
-import { PersonRow, Seg, SeatBadge } from './common';
+import { ActedFor, PersonRow, Seg, SeatBadge } from './common';
 import { day } from './Devices';
 
 const TIERS: Tier[] = ['platinum', 'gold', 'silver'];
@@ -211,6 +211,28 @@ export function Permissions({ s, id }: { s: State; id: string }) {
           />
         </div>
       </div>
+
+      {admin && mayActAs(s, id) && !n.dead && (
+        <div class="card cta actas">
+          <Icon name="eye" />
+          <span>
+            <b>العمل بصفت{f ? 'ها' : 'ه'}</b>
+            <small>
+              ترى التطبيق كما يراه هاتف{f ? 'ها' : 'ه'}، وتطلب وتعتمد وترفض بمفتاح{f ? 'ها' : 'ه'}، لتجرّب ما يشكو منه. يُسجَّل كل ما تفعله باسم «مشرف العائلة بصفة {name}» ويراه
+              الجميع، ولا تصل إلى أجهزت{f ? 'ها' : 'ه'} ولا أمان{f ? 'ها' : 'ه'}.
+            </small>
+          </span>
+          <button
+            class="btn small"
+            onClick={() =>
+              confirm(`العمل بصفة ${name}؟ كل طلب أو اعتماد أو رفض منك يُسجَّل في سجل العائلة باسم «مشرف العائلة بصفة ${name}»، ويراه الجميع.`) && void run(() => actAs(id))
+            }
+          >
+            ابدأ
+          </button>
+        </div>
+      )}
+      {admin && <ActedFor s={s} id={id} />}
 
       {admin && (
         <>

@@ -2,6 +2,8 @@
 // announce that it can be installed; we keep that until the person taps our
 // button. Elsewhere, and on iPhone, the app shows the browser's own steps.
 import { set } from './data/store';
+import { isIOS, isInstalled } from './platform';
+export { isIOS, isInstalled };
 
 interface InstallEvent extends Event {
   prompt(): Promise<void>;
@@ -9,14 +11,6 @@ interface InstallEvent extends Event {
 }
 
 let deferred: InstallEvent | null = null;
-
-export function isInstalled(): boolean {
-  return matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
-}
-
-export function isIOS(): boolean {
-  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
 
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();

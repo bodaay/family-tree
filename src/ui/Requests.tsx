@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { set, approve, reject, viewer, nameOf, proposeRevert, isMinorViewer, decides, canAskOps, decideHidden, revealHidden, type State } from '../data/store';
 import type { Hidden } from '../data/hidden';
-import { titleOf, undoable } from '../data/history';
+import { byWho, titleOf, undoable } from '../data/history';
 import { canApprove, approversFor, NEED, seatOf, TIER_AR } from '../data/governance';
 import type { Tx } from '../data/types';
 import { Icon } from './icons';
@@ -71,7 +71,7 @@ export function Requests({ s }: { s: State }) {
           <div class="persona">
             <Avatar id={v} s={s} size={30} />
             <span>
-              {s.isSample ? 'تعرض كـ ' : ''}
+              {s.isSample ? 'تعرض كـ ' : s.actingAs ? 'تعمل بصفة ' : ''}
               <b>{nameOf(s, v)}</b>
             </span>
             <SeatBadge s={s} id={v} />
@@ -131,12 +131,13 @@ export function Requests({ s }: { s: State }) {
                   {t.direct
                     ? 'مباشرة من مشرف العائلة'
                     : t.byAdmin
-                      ? (t.status === 'approved' ? 'اعتمده' : 'رفضه') + ' مشرف العائلة' + (t.approvals.length ? '، بعد ' + t.approvals.map(a => nameOf(s, a.by)).join('، ') : '')
+                      ? (t.status === 'approved' ? 'اعتمده' : 'رفضه') + ' مشرف العائلة' + (t.approvals.length ? '، بعد ' + t.approvals.map(a => byWho(s, a.by, a.via)).join('، ') : '')
                     : t.status === 'approved'
-                      ? 'معتمد من ' + t.approvals.map(a => nameOf(s, a.by) + (a.override ? ' (تجاوز بلاتيني)' : '')).join('، ')
+                      ? 'معتمد من ' + t.approvals.map(a => byWho(s, a.by, a.via) + (a.override ? ' (تجاوز بلاتيني)' : '')).join('، ')
                       : t.closed
                         ? 'أُغلق: من يخصه الطلب ليس في الشجرة'
-                        : 'رفضه ' + nameOf(s, t.rejectedBy!)}
+                        : 'رفضه ' + byWho(s, t.rejectedBy!, t.rejectedVia)}
+                  {t.via && ' · أرسله مشرف العائلة بصفة ' + nameOf(s, t.by)}
                   {' · ' + day(t)}
                 </small>
               </span>
@@ -170,6 +171,7 @@ function Card({ s, t }: { s: State; t: Tx }) {
       <div class="rq-top">
         <Avatar id={t.by} s={s} size={36} />
         <span>
+          {t.via && 'مشرف العائلة بصفة '}
           <b>{nameOf(s, t.by)}</b> يطلب
           <small>{new Date(t.at).toLocaleString('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short' })}</small>
         </span>
@@ -186,7 +188,7 @@ function Card({ s, t }: { s: State; t: Tx }) {
         <Icon name="key" size={15} /> يحتاج: {need.text}
         {branch ? ' من فرع ' + branch : ''} · تم {t.approvals.length} من {need.count}
       </div>
-      {t.approvals.length > 0 && <div class="need ok">اعتمده: {t.approvals.map(a => nameOf(s, a.by)).join('، ')}</div>}
+      {t.approvals.length > 0 && <div class="need ok">اعتمده: {t.approvals.map(a => byWho(s, a.by, a.via)).join('، ')}</div>}
       {c.ok ? (
         <>
           {admin && <div class="need">بصفتك مشرف العائلة: يُعتمد أو يُرفض بقرارك وحدك.</div>}

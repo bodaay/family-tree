@@ -349,7 +349,7 @@ export function describe(s: State, x: ExportRec): { what: string; how: string; w
   const n = s.graph.nodes.get(x.what.from);
   const what = !n ? 'شخص لم يعد في الشجرة' : x.what.kind === 'up' ? 'نسب ' + nameOf(s, x.what.from) : n.familyRoot ? 'شجرة الأسرة كاملة' : (s.graph.branches.includes(x.what.from) ? 'فرع ' : 'بيت ') + nameOf(s, x.what.from);
   const how = [x.what.mode === 'sheets' ? `${num(x.what.sheets)} لوحات ${x.what.paper}` : `لوحة ${x.what.paper}`, x.what.women === 'names' ? 'بأسماء البنات' : '', x.what.years ? '' : 'بلا سنوات'].filter(Boolean).join('، ');
-  const who = x.by && s.graph.nodes.has(x.by) ? nameOf(s, x.by) : 'مشرف العائلة';
+  const who = x.by && s.graph.nodes.has(x.by) ? (x.via ? 'مشرف العائلة بصفة ' : '') + nameOf(s, x.by) : 'مشرف العائلة';
   const when = new Date(x.at).toLocaleDateString('ar-SA-u-ca-gregory-nu-arab', { day: 'numeric', month: 'long', year: 'numeric' });
   return { what, how, who, when };
 }
