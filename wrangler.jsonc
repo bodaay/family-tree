@@ -1,0 +1,27 @@
+// Cloudflare: the app's files as static assets, the API in worker/index.ts, and
+// each family's log in a Durable Object (SQLite). docs/deploy.md has the steps.
+//   npm run deploy
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // the Worker's name in your Cloudflare account
+  "name": "family-tree",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "LOGS", "class_name": "FamilyLog" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FamilyLog"] }],
+  // Your family's own address (a domain whose DNS is on Cloudflare). Passkeys
+  // (the Face ID lock) and installed apps are tied to it, so choose it before
+  // anyone joins; then set workers_dev to false, so the family is reachable at
+  // that one address only.
+  // "routes": [{ "pattern": "family.example.org", "custom_domain": true }],
+  "workers_dev": true,
+  "preview_urls": false
+}

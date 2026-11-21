@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#1F2347"/><stop offset="1" stop-color="#07080E"/></radialGradient>
+    <radialGradient id="gl" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#B6A9FF" stop-opacity=".9"/><stop offset="1" stop-color="#B6A9FF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- the glyph inside the 80% safe zone, so Android can crop to any shape -->
+  <g transform="translate(256 256) scale(0.72) translate(-256 -240)">
+  <g fill="none" stroke="#A595FF" stroke-width="14" stroke-linecap="round">
+    <path d="M256 150 C256 210 160 220 150 300"/><path d="M256 150 C256 210 352 220 362 300"/><path d="M256 150 V300"/>
+    <path d="M150 300 C150 340 110 350 104 392"/><path d="M150 300 C150 340 190 350 196 392"/>
+    <path d="M362 300 C362 340 322 350 316 392"/><path d="M362 300 C362 340 402 350 408 392"/><path d="M256 300 V392"/>
+  </g>
+  <circle cx="256" cy="140" r="70" fill="url(#gl)"/>
+  <circle cx="256" cy="140" r="34" fill="#FFFFFF"/>
+  <g fill="#DCD5FF"><circle cx="150" cy="300" r="20"/><circle cx="256" cy="300" r="20"/><circle cx="362" cy="300" r="20"/></g>
+  <g fill="#A595FF"><circle cx="104" cy="392" r="14"/><circle cx="196" cy="392" r="14"/><circle cx="256" cy="392" r="14"/><circle cx="316" cy="392" r="14"/><circle cx="408" cy="392" r="14"/></g>
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+.wrangler/
+.dev.vars
+
+# A family's own files never go into git here: its names (data/family/), its
+# keys and links (data/secrets/: whoever has them can read the family or act as
+# its root admin, for good) and the local server's log (data/server/). If you
+# keep your family's data in git, use a private repository of your own.
+/data/

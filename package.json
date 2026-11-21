@@ -1,0 +1,37 @@
+{
+  "name": "family-tree",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "app": "vite --host",
+    "server": "node server/index.ts",
+    "family:init": "node scripts/init-family.ts",
+    "build": "npm run check && vite build",
+    "start": "node server/index.ts",
+    "check": "tsc --noEmit && tsc --noEmit -p worker",
+    "cf:dev": "vite build && wrangler dev --port 8789",
+    "deploy": "npm run build && wrangler deploy",
+    "test:e2e": "zsh tests/e2e/run.sh"
+  },
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "harfbuzzjs": "1.6.4",
+    "jsqr": "1.4.0",
+    "preact": "10.29.8",
+    "uqr": "0.1.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261016.1",
+    "@preact/preset-vite": "2.10.6",
+    "@types/node": "24.19.2",
+    "puppeteer-core": "24.43.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "wrangler": "4.151.1"
+  }
+}
